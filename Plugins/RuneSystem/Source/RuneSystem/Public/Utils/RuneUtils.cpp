@@ -3,23 +3,38 @@
 
 #include "RuneUtils.h"
 #include "RuneEffect.h"
+#include "RuneEffectHandle.h"
 
 
-bool URuneUtils::ApplyEffect(URuneEffect* effect, AController* instigator, AActor* causer, AActor* target)
+FRuneEffectHandle URuneUtils::ActivateEffectByClass(const TSubclassOf<URuneEffect> EffectClass, const FRuneEffectPayload& Payload, URuneEffect*& OutEffect)
 {
-	if (effect == nullptr || target == nullptr) return false;
+	if (!IsValid(EffectClass) || !IsValid(Payload.Target))
+	{
+		return FRuneEffectHandle::Invalid;
+	}
 
-	bool success = false;
-	effect->InternalApply(instigator, causer, target, { &success });
-	return success;
+	OutEffect = NewObject<URuneEffect>(GetTransientPackage(), EffectClass, TEXT("Rune Effect"), RF_Transient);
+	check(IsValid(OutEffect));
+
+	return OutEffect->Activate(Payload);
 }
 
-bool URuneUtils::RevertEffect(URuneEffect* effect, AActor* target)
+FRuneEffectHandle URuneUtils::ActivateEffect(URuneEffect* Effect, const FRuneEffectPayload& Payload)
 {
-	if (effect == nullptr || target == nullptr) return false;
+	if (!IsValid(Effect) || !IsValid(Payload.Target))
+	{
+		return FRuneEffectHandle::Invalid;
+	}
 
-	bool success = false;
-	effect->InternalRevert(target, { &success });
-	return success;
+	return Effect->Activate(Payload);
 }
 
+void URuneUtils::DeactivateEffect(const FRuneEffectHandle& Handle)
+{
+	if (!IsValid(Handle.Effect) || !IsValid(Handle.Payload.Target))
+	{
+		return;
+	}
+
+	Handle.Effect->Deactivate(Handle);
+}

@@ -8,18 +8,6 @@
 
 
 USTRUCT(BlueprintType)
-struct FBooleanPtr
-{
-	GENERATED_BODY()
-	bool* value;
-
-	bool operator*()
-	{
-		return *value;
-	}
-};
-
-USTRUCT(BlueprintType)
 struct FRuneTangibleAgentTemplate
 {
 	GENERATED_BODY()
@@ -31,7 +19,7 @@ public:
 	{
 		return agentClass;
 	};
-	
+
 public:
 	/** Sets the class of TangibleAgent to be used */
 	UPROPERTY(EditAnywhere)

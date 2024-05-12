@@ -4,7 +4,10 @@
 #include "RuneBehaviour.h"
 #include "RuneCompatible.h"
 #include "RuneTangibleAgent.h"
+#include "RuneEffectPayload.h"
 #include "Utils/RuneUtils.h"
+#include "RuneSystem.h"
+#include "RuneEffect.h"
 
 
 URuneBehaviour::URuneBehaviour() :
@@ -80,7 +83,7 @@ bool URuneBehaviour::IsPreviewShowing() const
 
 ARuneTangibleAgent* URuneBehaviour::SpawnTangibleAgent(UClass* inClass, const FTransform& transform)
 {
-	//ASSERT(inClass != nullptr, "Tangible agent class has not been properly set");
+	checkf(inClass != nullptr, TEXT("Tangible agent class has not been properly set"));
 	return URuneUtils::SpawnTangibleAgent<ARuneTangibleAgent, const FTransform&>(*this, inClass, transform);
 }
 
@@ -101,13 +104,13 @@ ARuneTangibleAgent* URuneBehaviour::SpawnTangibleAgent(const FRuneTangibleAgentT
 
 ARuneTangibleAgent* URuneBehaviour::SpawnTangibleAgentWithTemplate(const FRuneTangibleAgentTemplate& agentTemplate, const FTransform& transform)
 {
-	//ASSERT(agentTemplate.agentClass != nullptr, "Tangible agent template class has not been properly set");
+	checkf(agentTemplate.agentClass != nullptr, TEXT("Tangible agent template class has not been properly set"));
 	return URuneUtils::SpawnTangibleAgent<ARuneTangibleAgent, const FTransform&>(*this, agentTemplate, transform);
 }
 
 ARunePreviewAgent* URuneBehaviour::SpawnPreviewAgent(UClass* inClass, const FTransform& transform)
 {
-	//ASSERT(inClass != nullptr, "Preview agent class has not been properly set");
+	checkf(inClass != nullptr, TEXT("Preview agent class has not been properly set"));
 	return URuneUtils::SpawnPreviewAgent<ARunePreviewAgent, const FTransform&>(*this, inClass, transform);
 }
 
@@ -128,18 +131,27 @@ ARunePreviewAgent* URuneBehaviour::SpawnPreviewAgent(const FRuneTangibleAgentTem
 
 ARunePreviewAgent* URuneBehaviour::SpawnPreviewAgentWithTemplate(const FRuneTangibleAgentTemplate& agentTemplate, const FTransform& transform)
 {
-	//ASSERT(agentTemplate.agentClass != nullptr, "Preview agent template class has not been properly set");
+	checkf(agentTemplate.agentClass != nullptr, TEXT("Preview agent template class has not been properly set"));
 	return URuneUtils::SpawnPreviewAgent<ARunePreviewAgent, const FTransform&>(*this, agentTemplate, transform);
 }
 
 bool URuneBehaviour::BroadcastApplyPulse(AActor* actor) const
 {
 	bool success = false;
-	FBooleanPtr successPtr({ &success });
-
 	if (onApplyPulse.IsBound() && runeOwner != nullptr)
 	{
-		onApplyPulse.Broadcast(runeOwner->GetController(), (AActor*) runeOwner->GetController(), actor, successPtr);
+		FRuneEffectPayload Payload;
+		Payload.Target = actor;
+		Payload.Instigator = runeOwner->GetController();
+		Payload.Causer = runeOwner->GetController();
+
+		// TODO: This should be better done
+		//onApplyPulse.Broadcast(Payload);
+		for (UObject* Object : onApplyPulse.GetAllObjects())
+		{
+			URuneEffect* Effect = Cast<URuneEffect>(Object);
+			URuneUtils::ActivateEffect(Effect, Payload);
+		}
 	}
 	onApplyPulseBroadcast.Broadcast(actor, success);
 
@@ -149,11 +161,21 @@ bool URuneBehaviour::BroadcastApplyPulse(AActor* actor) const
 bool URuneBehaviour::BroadcastRevertPulse(AActor* actor) const
 {
 	bool success = false;
-	FBooleanPtr successPtr({ &success });
 
 	if (onRevertPulse.IsBound())
 	{
-		onRevertPulse.Broadcast(actor, successPtr);
+		// TODO: This should be better done
+		// onRevertPulse.Broadcast(Payload);
+		TArray<FRuneEffectHandle> Handles = URuneSystem::GetEffectHandlesByPredicate(
+			[actor, this](const FRuneEffectHandle& Handle)
+			{
+				return onApplyPulse.GetAllObjects().Contains(Handle.Effect) && Handle.Payload.Target == actor;
+			});
+
+		for (const FRuneEffectHandle& Handle : Handles)
+		{
+			URuneUtils::DeactivateEffect(Handle);
+		}
 	}
 	onRevertPulseBroadcast.Broadcast(actor, success);
 

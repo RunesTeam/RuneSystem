@@ -53,7 +53,7 @@ struct FRuneBehaviourWithEffects
 		{
 			if (runeEffect != nullptr)
 			{
-				runeEffect->DestroyComponent();
+				//runeEffect->DestroyComponent();
 			}
 		}
 	}
@@ -123,6 +123,9 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = "RuneBase: General Settings", EditFixedSize, meta = (ShowOnlyInnerProperties))
 	TArray<FRuneBehaviourWithEffects> runeBehavioursWithEffects;
+
+	UPROPERTY(EditAnywhere, Category = "RuneBase: General Settings", Instanced, meta = (FullyExpand = true), BlueprintReadOnly)
+	class UObject* test;
 
 protected:
 

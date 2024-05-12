@@ -3,8 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Components/ActorComponent.h"
 #include "Utils/RuneUtils.h"
+#include "RuneEffectPayload.h"
 #include "RuneEffect.generated.h"
 
 
@@ -12,18 +12,10 @@ class AActor;
 class URuneFilter;
 
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FEffectApplicationDelegate, class AActor*, actor);
-
-UENUM()
-enum class EApplicationType
-{
-	IMMEDIATE = 0,
-	OVER_TIME,
-	STATUS,
-};
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FEffectApplicationDelegate, const FRuneEffectPayload&, Payload);
 
 UCLASS(Abstract, Blueprintable, EditInlineNew, AutoExpandCategories = "RuneEffect: General Settings", HideCategories = ("ComponentTick", Tags, AssetUserData, ComponentReplication, Activation, Variable, Sockets, Collision, Cooking))
-class RUNESYSTEM_API URuneEffect : public UActorComponent
+class RUNESYSTEM_API URuneEffect : public UObject
 {
 	GENERATED_BODY()
 
@@ -46,24 +38,6 @@ public:
 
 public:
 	/**
-	 * Manages the effect application to the specified AActor.
-	 * (e.g. substract X health points)
-	 * 
-	 * @param instigator Controller that will spawn and/or control the causer
-	 * @param causer Actor which will apply the effect application.
-	 * @param target Actor which will recieve the effect application.
-	 */
-	virtual void Apply(AController* instigator, AActor* causer, AActor* target);
-
-	/**
-	 * Manages the effect "undo" to the specified AActor.
-	 * (e.g. recover X health points)
-	 *
-	 * @param actor Actor which will recieve the effect "undo".
-	 */
-	virtual void Revert(AActor* actor);
-
-	/**
 	 * Gets the filter that it is going to be used for filtering.
 	 * If OverrideFilter is true, CustomFilter will be returned.
 	 *
@@ -73,7 +47,7 @@ public:
 	const URuneFilter* GetUsedFilter() const;
 
 	/**
-	 * Get the chached instigator of the effect.
+	 * Get the cached instigator of the effect.
 	 * It could be nullptr.
 	 * 
 	 * @return Instigator.
@@ -82,7 +56,7 @@ public:
 	AController* GetInstigator() const;
 
 	/**
-	 * Sets the cached intigator of the effect.
+	 * Sets the cached instigator of the effect.
 	 * 
 	 * @param filter Instigator filter
 	 */
@@ -90,7 +64,7 @@ public:
 	void SetInstigator(AController* instigator);
 
 	/**
-	 * Get the chached filter used by the instigator of the effect.
+	 * Get the cached filter used by the instigator of the effect.
 	 * It could be nullptr.
 	 * 
 	 * @return Instigator filter.
@@ -99,7 +73,7 @@ public:
 	const URuneFilter* GetInstigatorFilter() const;
 
 	/**
-	 * Sets the cached filter used by the intigator of the effect.
+	 * Sets the cached filter used by the instigator of the effect.
 	 * If set to nullptr, it would be cleared and would use the default settings.
 	 * 
 	 * @param filter Instigator filter
@@ -108,7 +82,7 @@ public:
 	void SetInstigatorFilter(const URuneFilter* filter);
 
 	/**
-	 * Wheter or not the actor has been filtered.
+	 * Whether or not the actor has been filtered.
 	 * 
 	 * The fact that something has been filtered out means
 	 * that it should be discarded from the flow.
@@ -124,25 +98,46 @@ public:
 protected:
 	/**
 	 * Manages the effect application to the specified AActor.
-	 * (e.g. substract X health points)
+	 * (e.g. subtract X health points)
 	 *
 	 * @param instigator Controller that will spawn and/or control the causer
 	 * @param causer Actor which will apply the effect application.
-	 * @param target Actor which will recieve the effect application.
+	 * @param target Actor which will receive the effect application.
 	 */
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "Apply"))
-	void ReceiveApply(AController* instigator, AActor* causer, AActor* target);
+	void ReceiveApply(const FRuneEffectPayload& Payload);
 
 	/**
 	 * Manages the effect "undo" to the specified AActor.
 	 * (e.g. recover X health points)
 	 *
-	 * @param target Actor which will recieve the effect "undo".
+	 * @param target Actor which will receive the effect "undo".
 	 */
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "Revert"))
-	void ReceiveRevert(AActor* target);
+	void ReceiveRevert(const FRuneEffectPayload& Payload);
 
 private:
+	void SubmitApply(const FRuneEffectPayload& Payload);
+	void SubmitRevert(const FRuneEffectPayload& Payload);
+
+	/**
+	 * Manages the effect application to the specified AActor.
+	 * (e.g. subtract X health points)
+	 *
+	 * @param instigator Controller that will spawn and/or control the causer
+	 * @param causer Actor which will apply the effect application.
+	 * @param target Actor which will receive the effect application.
+	 */
+	virtual void Apply(const FRuneEffectPayload& Payload);
+
+	/**
+	 * Manages the effect "undo" to the specified AActor.
+	 * (e.g. recover X health points)
+	 *
+	 * @param actor Actor which will receive the effect "undo".
+	 */
+	virtual void Revert(const FRuneEffectPayload& Payload);
+
 	/**
 	 * Blueprint version of Filter() method.
 	 */
@@ -153,51 +148,21 @@ private:
 	 * Intermediate Apply() method used in the filtering process.
 	 */
 	UFUNCTION()
-	virtual void InternalApply(AController* instigator, AActor* causer, AActor* target, FBooleanPtr success);
+	virtual FRuneEffectHandle Activate(const FRuneEffectPayload& Payload);
+
+	/**
+	 * Intermediate Apply() method used in the filtering process.
+	 */
+	UFUNCTION()
+	void ActivateRaw(const FRuneEffectPayload& Payload);
 
 	/**
 	 * Intermediate Revert() method used in the filtering process.
+	 * Filtering is not needed. Deactivation implies a previous filtered 
+	 * and successfully activation.
 	 */
 	UFUNCTION()
-	virtual void InternalRevert(AActor* target, FBooleanPtr success);
-
-	/**
-	 * Apply() wrapper.
-	 * Added for consistency with the other EApplicationTypes
-	 *
-	 * @param instigator Controller that will spawn and/or control the causer
-	 * @param causer Actor which will apply the effect application.
-	 * @param target Actor which will recieve the effect application.
-	 */
-	void ApplyEffectInstant(AController* instigator, AActor* causer, AActor* target);
-
-	/**
-	 * Delegates the Apply() and Revert() functionality
-	 * to an Effect over Time component (EoTComponent).
-	 *
-	 * @param instigator Controller that will spawn and/or control the causer
-	 * @param causer Actor which will apply the effect application.
-	 * @param target Actor which will recieve the effect application.
-	 */
-	void ApplyEffectOverTime(AController* instigator, AActor* causer, AActor* target);
-
-	/**
-	 * Delegates the Apply() and Revert() functionality
-	 * to an Status component (StatusComponent).
-	 *
-	 * @param instigator Controller that will spawn and/or control the causer
-	 * @param causer Actor which will apply the effect application.
-	 * @param target Actor which will recieve the effect application.
-	 */
-	void ApplyEffectStatus(AController* instigator, AActor* causer, AActor* target);
-
-	/**
-	 * Revert() wrapper.
-	 * Added for consistency with its counterpart (apply)
-	 *
-	 * @param target Actor which will recieve the effect application.
-	 */
-	void RevertEffectInstant(AActor* target);
+	virtual void Deactivate(const FRuneEffectHandle& Handle);
 
 public:
 	/** Whether the effect should use a custom filter */
@@ -208,39 +173,10 @@ public:
 	UPROPERTY(EditAnywhere, Category = "RuneEffect: General Settings", meta = (EditCondition = "overrideFilter==true", EditConditionHides))
 	URuneFilter* customFilter;
 
-	/** Type of application should be used */
-	UPROPERTY(EditAnywhere, Category = "RuneEffect: General Settings")
-	EApplicationType applicationType;
+	/** Application Mode should be used */
+	UPROPERTY(EditAnywhere, Category = "RuneEffect: General Settings", Instanced, NoClear, meta = (NoResetToDefault))
+	class URuneEffectApplicationMode* ApplicationMode;
 
-	/**
-	 * How many times should the effect be applied.
-	 * Only compatible with effects with positive duration.
-	 */
-	UPROPERTY(EditAnywhere, Category = "RuneEffect: General Settings", meta = (EditCondition = "applicationType==EApplicationType::OVER_TIME && duration>0", EditConditionHides))
-	uint32 ticks;
-
-	/**
-	 * Time window - in seconds - between consecutive ticks.
-	 * Necessary for effects with negative (undefined) duration.
-	 */
-	UPROPERTY(EditAnywhere, Category = "RuneEffect: General Settings", meta = (EditCondition = "applicationType==EApplicationType::OVER_TIME && duration<0", EditConditionHides))
-	float tickRate;
-	
-	/**
-	 * How much time - in seconds - should the effect last.
-	 * If negative it will last until revertion.
-	 */
-	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "RuneEffect: General Settings", meta = (EditCondition = "applicationType!=EApplicationType::IMMEDIATE", EditConditionHides))
-	float duration;
-
-	/**
-	 * Whether the ticks should be adjusted to the duration start-end interval or just distributed in time.
-	 * - If true:	|__|__|__|__|
-	 * - If false:	_|_|_|_|_|_
-	 */
-	UPROPERTY(EditAnywhere, Category = "RuneEffect: General Settings", meta = (EditCondition = "applicationType==EApplicationType::OVER_TIME", EditConditionHides))
-	bool trimTickDistribution;
-	
 	/** Delegate invoked when a effect has been applied */
 	UPROPERTY(BlueprintAssignable, Category = "RuneEffect: General Settings")
 	FEffectApplicationDelegate onEffectApplied;
@@ -267,8 +203,7 @@ protected:
 	const URuneFilter* instigatorFilter;
 
 private:
-	friend class UEoTComponent;
-	friend class UStatusComponent;
+	friend class URuneEffectApplicationMode;
 	friend class URuneBaseComponent;
 	friend class ARuneTangibleAgent;
 	friend class URuneUtils;

@@ -12,8 +12,9 @@ class IRuneCompatible;
 class ARuneTangibleAgent;
 class ARunePreviewAgent;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FRunePulseDelegate, AController*, instigator, AActor*, causer, AActor*, target, FBooleanPtr, success);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FRuneRevertDelegate, AActor*, target, FBooleanPtr, success);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FRunePulseDelegate, const struct FRuneEffectPayload&, Payload);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FRuneRevertDelegate, const struct FRuneEffectHandle&, Handle);
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FRuneBehaviourActivationDelegate);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FRuneBehaviourApplicationDelegate, AActor*, target, bool, success);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FRunePreviewDelegate);

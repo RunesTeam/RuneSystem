@@ -19,7 +19,7 @@ void URuneBaseComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// configure all relatioships between components
+	// configure all relationships between components
 	Configure();
 }
 
@@ -86,8 +86,8 @@ void URuneBaseComponent::Configure() const
 		behaviours.Add(rb.runeBehaviour);
 		for (URuneEffect* effect : rb.runeEffects)
 		{
-			rb.runeBehaviour->onApplyPulse.AddDynamic(effect, &URuneEffect::InternalApply);
-			rb.runeBehaviour->onRevertPulse.AddDynamic(effect, &URuneEffect::InternalRevert);
+			rb.runeBehaviour->onApplyPulse.AddDynamic(effect, &URuneEffect::ActivateRaw);
+			rb.runeBehaviour->onRevertPulse.AddDynamic(effect, &URuneEffect::Deactivate);
 		}
 	}
 	runeCastStateMachine->SetLinkedBehaviour(behaviours);

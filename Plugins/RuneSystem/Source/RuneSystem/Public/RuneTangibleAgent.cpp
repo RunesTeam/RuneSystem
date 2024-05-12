@@ -4,6 +4,7 @@
 #include "RuneTangibleAgent.h"
 #include "RunePreviewAgent.h"
 #include "RuneEffect.h"
+#include "RuneSystem.h"
 
 
 ARuneTangibleAgent::ARuneTangibleAgent() : 
@@ -49,16 +50,21 @@ bool ARuneTangibleAgent::TryApplyEffects(AActor* actor)
 	if(actor == nullptr) return false;
 
 	bool success = false;
-	FBooleanPtr successPtr({ &success });
 	for (URuneEffect* effect : attachedRuneEffects)
 	{
 		if (effect != nullptr)
 		{
-			effect->InternalApply(effect->GetInstigator(), this, actor, successPtr);
+			FRuneEffectPayload Payload;
+			Payload.Target = actor;
+			Payload.Instigator = effect->GetInstigator();
+			Payload.Causer = this;
+
+			URuneUtils::ActivateEffect(effect, Payload);
 		}
 	}
 	onApplyEffects.Broadcast(actor, success);
 
+	// TODO: Return array of valid handles
 	return success;
 }
 
@@ -67,16 +73,25 @@ bool ARuneTangibleAgent::TryRevertEffects(AActor* actor)
 	if(actor == nullptr) return false;
 
 	bool success = false;
-	FBooleanPtr successPtr({ &success });
 	for (URuneEffect* effect : attachedRuneEffects)
 	{
 		if (effect != nullptr)
 		{
-			effect->InternalRevert(actor, successPtr);
+			TArray<FRuneEffectHandle> Handles = URuneSystem::GetEffectHandlesByPredicate(
+				[actor, this](const FRuneEffectHandle& Handle)
+				{
+					return attachedRuneEffects.Contains(Handle.Effect) && Handle.Payload.Target == actor;
+				});
+
+			for (const FRuneEffectHandle& Handle : Handles)
+			{
+				URuneUtils::DeactivateEffect(Handle);
+			}
 		}
 	}
 	onRevertEffects.Broadcast(actor, success);
 
+	// TODO: Return array of valid handles
 	return success;
 }
 

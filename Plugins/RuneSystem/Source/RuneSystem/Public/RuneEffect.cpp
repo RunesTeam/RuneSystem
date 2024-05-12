@@ -4,25 +4,19 @@
 #include "RuneEffect.h"
 #include "RuneCompatible.h"
 #include "RuneFilter.h"
-#include "ApplicationType/EoTComponent.h"
-#include "ApplicationType/StatusComponent.h"
-
+#include "ApplicationMode/InstantRuneEffectApplicationMode.h"
+#include "RuneSystem.h"
 
 
 URuneEffect::URuneEffect() :
 	overrideFilter(false),
 	customFilter(nullptr),
-	applicationType(EApplicationType::IMMEDIATE),
-	ticks(5),
-	tickRate(0.5f),
-	duration(5.0f),
-	trimTickDistribution(true),
+	ApplicationMode(nullptr),
 	filterFaction(static_cast<uint8>(ERuneFilterFaction::FACTION_B)),
 	runeInstigator(nullptr),
 	instigatorFilter(nullptr)
 {
-	// do not tick by default
-	PrimaryComponentTick.bCanEverTick = false;
+	ApplicationMode = CreateDefaultSubobject<UInstantRuneEffectApplicationMode>("Application Mode");
 }
 
 #if WITH_EDITOR
@@ -32,24 +26,12 @@ bool URuneEffect::CanEditChange(const FProperty* InProperty) const
 
 	if (InProperty->GetFName() == GET_MEMBER_NAME_CHECKED(URuneEffect, filterFaction))
 	{
-		return result && !HasBegunPlay();
+		return result;// && !HasBegunPlay();
 	}
 
 	return result;
 }
 #endif
-
-void URuneEffect::Apply(AController* instigator, AActor* causer, AActor* target)
-{
-	// by default calls the blueprint version
-	ReceiveApply(instigator, causer, target);
-}
-
-void URuneEffect::Revert(AActor* target)
-{
-	// by default calls the blueprint version
-	ReceiveRevert(target);
-}
 
 const URuneFilter* URuneEffect::GetUsedFilter() const
 {
@@ -91,6 +73,30 @@ bool URuneEffect::Filter(const AActor& actor) const
 	return !(filterFaction & ~runeFilter->Filter(actor, GetClass()));
 }
 
+void URuneEffect::SubmitApply(const FRuneEffectPayload& Payload)
+{
+	Apply(Payload);
+	onEffectApplied.Broadcast(Payload);
+}
+
+void URuneEffect::SubmitRevert(const FRuneEffectPayload& Payload)
+{
+	Revert(Payload);
+	onEffectReverted.Broadcast(Payload);
+}
+
+void URuneEffect::Apply(const FRuneEffectPayload& Payload)
+{
+	// by default calls the blueprint version
+	ReceiveApply(Payload);
+}
+
+void URuneEffect::Revert(const FRuneEffectPayload& Payload)
+{
+	// by default calls the blueprint version
+	ReceiveRevert(Payload);
+}
+
 bool URuneEffect::InvokeFilter(const AActor* actor) const
 {
 	if (actor == nullptr)
@@ -100,105 +106,30 @@ bool URuneEffect::InvokeFilter(const AActor* actor) const
 	return Filter(*actor);
 }
 
-void URuneEffect::InternalApply(AController* instigator, AActor* causer, AActor* target, FBooleanPtr success)
+FRuneEffectHandle URuneEffect::Activate(const FRuneEffectPayload& Payload)
 {
 	// if actor is filtered, do NOT apply the effect
-	bool filtered = Filter(*target);
-	if (success.value != nullptr)
+	bool bFiltered = Filter(*Payload.Target);
+	if (bFiltered)
 	{
-		*success.value |= !filtered;
-	}
-	if (filtered)
-	{
-		return;
+		return FRuneEffectHandle::Invalid;
 	}
 
-	switch (applicationType)
-	{
-	case EApplicationType::IMMEDIATE:
-		ApplyEffectInstant(instigator , causer, target);
-		break;
-	case EApplicationType::OVER_TIME:
-		ApplyEffectOverTime(instigator, causer, target);
-		break;
-	case EApplicationType::STATUS:
-		ApplyEffectStatus(instigator, causer, target);
-		break;
-	default:
-		Apply(instigator, causer, target);
-		break;
-	}
+	// Create valid handle
+	const FRuneEffectHandle& Handle = URuneSystem::CreateEffectHandle(this, Payload);
+	ApplicationMode->HandleEffectActivation(Handle);
+
+	return Handle;
 }
 
-void URuneEffect::InternalRevert(AActor* target, FBooleanPtr success)
+void URuneEffect::ActivateRaw(const FRuneEffectPayload& Payload)
 {
-	// filtering check
-	bool filtered = Filter(*target);
-	if (success.value != nullptr)
-	{
-		*success.value |= !filtered;
-	}
-	if (filtered)
-	{
-		return;
-	}
-
-	switch (applicationType)
-	{
-	case EApplicationType::IMMEDIATE:
-		RevertEffectInstant(target);
-		break;
-	case EApplicationType::OVER_TIME:
-		onEffectReverted.Broadcast(target);
-		break;
-	case EApplicationType::STATUS:
-		onEffectReverted.Broadcast(target);
-		break;
-	default:
-		RevertEffectInstant(target);
-		break;
-	}
+	Activate(Payload);
 }
 
-void URuneEffect::ApplyEffectInstant(AController* instigator, AActor* causer, AActor* target)
+void URuneEffect::Deactivate(const FRuneEffectHandle& Handle)
 {
-	Apply(instigator, causer, target);
-
-	// broadcast effect application
-	onEffectApplied.Broadcast(target);
-}
-
-void URuneEffect::ApplyEffectOverTime(AController* instigator, AActor* causer, AActor* target)
-{
-	UActorComponent* component = target->AddComponentByClass(UEoTComponent::StaticClass(), false, FTransform::Identity, true);
-	UEoTComponent* eotComponent = Cast<UEoTComponent>(component);
-	if (eotComponent == nullptr)
-	{
-		UE_LOG(LogTemp, Display, TEXT("[RuneEffect] EoTComponent is nullptr"));
-		return;
-	}
-	eotComponent->Configure(this, instigator, ticks, duration, trimTickDistribution, tickRate);
-	onEffectReverted.AddDynamic(eotComponent, &UEoTComponent::RemoveFromOwner);
-	target->FinishAddComponent(component, false, FTransform::Identity);
-}
-
-void URuneEffect::ApplyEffectStatus(AController* instigator, AActor* causer, AActor* target)
-{
-	UActorComponent* component = target->AddComponentByClass(UStatusComponent::StaticClass(), false, FTransform::Identity, true);
-	UStatusComponent* statusComponent = Cast<UStatusComponent>(component);
-	if (statusComponent == nullptr)
-	{
-		UE_LOG(LogTemp, Display, TEXT("[RuneEffect] StatusComponent is nullptr"));
-		return;
-	}
-	statusComponent->Configure(this, instigator, duration);
-	target->FinishAddComponent(component, false, FTransform::Identity);
-}
-
-void URuneEffect::RevertEffectInstant(AActor* target)
-{
-	Revert(target);
-
-	// broadcast effect revertion
-	onEffectReverted.Broadcast(target);
+	check(Handle.Effect == this);
+	ApplicationMode->HandleEffectDeactivation(Handle);
+	URuneSystem::DisposeEffectHandle(Handle);
 }

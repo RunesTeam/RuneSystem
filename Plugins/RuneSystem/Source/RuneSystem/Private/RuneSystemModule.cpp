@@ -1,6 +1,6 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
-#include "RuneSystem.h"
+#include "RuneSystemModule.h"
 
 #define LOCTEXT_NAMESPACE "FRuneSystemModule"
 

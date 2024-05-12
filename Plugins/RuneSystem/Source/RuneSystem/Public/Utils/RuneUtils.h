@@ -10,6 +10,7 @@
 #include "RuneTangibleAgent.h"
 #include "RunePreviewAgent.h"
 #include "RuneCompatible.h"
+#include "RuneEffectHandle.h"
 #include "RuneUtils.generated.h"
 
 UCLASS()
@@ -24,21 +25,36 @@ public:
 	 * @param effect Effect to be applied
 	 * @param instigator Controller that will spawn and/or control the causer
 	 * @param causer Actor which will apply the effect application.
-	 * @param target Actor which will recieve the effect application.
+	 * @param target Actor which will receive the effect application.
+	 * @return Whether or not it was possible to apply the effect
+	*/
+	UFUNCTION(BlueprintCallable, Category = "Rune System|Rune Effect", meta = (DeterminesOutputType = "EffectClass", DynamicOutputParam = "OutEffect", HideSelfPin))
+	static FRuneEffectHandle ActivateEffectByClass(
+		UPARAM(meta = (AllowAbstract = "false")) const TSubclassOf<class URuneEffect> EffectClass, 
+		const FRuneEffectPayload& Payload, 
+		class URuneEffect*& OutEffect);
+
+	/**
+	 * Applies an effect to a given target actor.
+	 *
+	 * @param effect Effect to be applied
+	 * @param instigator Controller that will spawn and/or control the causer
+	 * @param causer Actor which will apply the effect application.
+	 * @param target Actor which will receive the effect application.
 	 * @return Whether or not it was possible to apply the effect
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Rune System|Rune Effect", meta = (DefaultToSelf = "effect", HideSelfPin))
-	static bool ApplyEffect(class URuneEffect* effect, AController* instigator, AActor* causer, AActor* target);
+	UFUNCTION(BlueprintCallable, Category = "Rune System|Rune Effect", meta = (DefaultToSelf = "Effect", HideSelfPin))
+	static FRuneEffectHandle ActivateEffect(class URuneEffect* Effect, const FRuneEffectPayload& Payload);
 
 	/**
 	 * Reverts an effect of a given target actor.
 	 *
 	 * @param effect Effect to be reverted
-	 * @param target Actor which will recieve the effect "undo".
+	 * @param target Actor which will receive the effect "undo".
 	 * @return Whether or not it was possible to revert the effect
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Rune System|Rune Effect", meta = (DefaultToSelf = "effect", HideSelfPin))
-	static bool RevertEffect(class URuneEffect* effect, AActor* target);
+	UFUNCTION(BlueprintCallable, Category = "Rune System|Rune Effect", meta = (DefaultToSelf = "Effect", HideSelfPin))
+	static void DeactivateEffect(const FRuneEffectHandle& Handle);
 
 	template <class T, typename... Args>
 	static T* SpawnTangibleAgent(const URuneBehaviour& behaviour, UClass* InClass, Args... args);
@@ -236,7 +252,7 @@ inline T* URuneUtils::SpawnPreviewAgent(const URuneBehaviour& behaviour, const F
 		FString className = agentTemplate.properties[previewAgentClassPropertyName];
 		if (className == FString::Printf(TEXT("None"))) return nullptr;
 
-		// find class and instanciated it
+		// find class and instantiated it
 		UObject* classPackage = ANY_PACKAGE;
 		if (UClass* result = FindObject<UClass>(classPackage, *className))
 		{
