@@ -65,8 +65,8 @@ void URuneBaseComponent::SetOwner(IRuneCompatible* owner)
 		{
 			if (effect != nullptr)
 			{
-				effect->SetInstigatorFilter(owner->GetRuneFilter());
-				effect->SetInstigator(owner->GetController());
+				/*effect->SetInstigatorFilter(owner->GetRuneFilter());
+				effect->SetInstigator(owner->GetController());*/
 			}
 		}
 	}
@@ -86,8 +86,8 @@ void URuneBaseComponent::Configure() const
 		behaviours.Add(rb.runeBehaviour);
 		for (URuneEffect* effect : rb.runeEffects)
 		{
-			rb.runeBehaviour->onApplyPulse.AddDynamic(effect, &URuneEffect::ActivateRaw);
-			rb.runeBehaviour->onRevertPulse.AddDynamic(effect, &URuneEffect::Deactivate);
+		/*	rb.runeBehaviour->onApplyPulse.AddDynamic(effect, &URuneEffect::Activate);
+			rb.runeBehaviour->onRevertPulse.AddDynamic(effect, &URuneEffect::Deactivate);*/
 		}
 	}
 	runeCastStateMachine->SetLinkedBehaviour(behaviours);

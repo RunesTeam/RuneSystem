@@ -8,16 +8,11 @@
 #include "RuneEffect.generated.h"
 
 
-class AActor;
-class URuneFilter;
-
-
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FEffectApplicationDelegate, const FRuneEffectPayload&, Payload);
-
 UCLASS(Abstract, Blueprintable, EditInlineNew, AutoExpandCategories = "RuneEffect: General Settings", HideCategories = ("ComponentTick", Tags, AssetUserData, ComponentReplication, Activation, Variable, Sockets, Collision, Cooking))
 class RUNESYSTEM_API URuneEffect : public UObject
 {
 	GENERATED_BODY()
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FEffectApplicationDelegate, const FRuneEffectPayload&, Payload);
 
 public:
 	// Sets default values for this component's properties
@@ -35,65 +30,6 @@ public:
 	 */
 	virtual bool CanEditChange(const FProperty* InProperty) const override;
 #endif
-
-public:
-	/**
-	 * Gets the filter that it is going to be used for filtering.
-	 * If OverrideFilter is true, CustomFilter will be returned.
-	 *
-	 * @return Used filter, either it is CustomFilter or the global filter.
-	 */
-	UFUNCTION(BlueprintCallable)
-	const URuneFilter* GetUsedFilter() const;
-
-	/**
-	 * Get the cached instigator of the effect.
-	 * It could be nullptr.
-	 * 
-	 * @return Instigator.
-	 */
-	UFUNCTION(BlueprintCallable)
-	AController* GetInstigator() const;
-
-	/**
-	 * Sets the cached instigator of the effect.
-	 * 
-	 * @param filter Instigator filter
-	 */
-	UFUNCTION(BlueprintCallable)
-	void SetInstigator(AController* instigator);
-
-	/**
-	 * Get the cached filter used by the instigator of the effect.
-	 * It could be nullptr.
-	 * 
-	 * @return Instigator filter.
-	 */
-	UFUNCTION(BlueprintCallable)
-	const URuneFilter* GetInstigatorFilter() const;
-
-	/**
-	 * Sets the cached filter used by the instigator of the effect.
-	 * If set to nullptr, it would be cleared and would use the default settings.
-	 * 
-	 * @param filter Instigator filter
-	 */
-	UFUNCTION(BlueprintCallable)
-	void SetInstigatorFilter(const URuneFilter* filter);
-
-	/**
-	 * Whether or not the actor has been filtered.
-	 * 
-	 * The fact that something has been filtered out means
-	 * that it should be discarded from the flow.
-	 * Whether it is applying an effect or checking whether an
-	 * effect can be applied to an actor, if it is filtered out,
-	 * the given actor should NOT get any effect.
-	 *
-	 * @param actor Actor to be filtered.
-	 * @return If true, actor is filtered (discarded from the flow).
-	 */
-	bool Filter(const AActor& actor) const;
 
 protected:
 	/**
@@ -117,16 +53,27 @@ protected:
 	void ReceiveRevert(const FRuneEffectPayload& Payload);
 
 private:
+	/**
+	 * Invokes once Apply() with a given payload.
+	 * Broadcasts all internal delegates.
+	 * 
+	 * @param Payload Used for targeting purposes.
+	 */
 	void SubmitApply(const FRuneEffectPayload& Payload);
+
+	/**
+	 * Invokes once Revert() with a given payload.
+	 * Broadcasts all internal delegates.
+	 *
+	 * @param Payload Used for targeting purposes.
+	 */
 	void SubmitRevert(const FRuneEffectPayload& Payload);
 
 	/**
 	 * Manages the effect application to the specified AActor.
 	 * (e.g. subtract X health points)
 	 *
-	 * @param instigator Controller that will spawn and/or control the causer
-	 * @param causer Actor which will apply the effect application.
-	 * @param target Actor which will receive the effect application.
+	 * @param Payload Used for targeting purposes.
 	 */
 	virtual void Apply(const FRuneEffectPayload& Payload);
 
@@ -134,44 +81,49 @@ private:
 	 * Manages the effect "undo" to the specified AActor.
 	 * (e.g. recover X health points)
 	 *
-	 * @param actor Actor which will receive the effect "undo".
+	 * @param Payload Used for targeting purposes.
 	 */
 	virtual void Revert(const FRuneEffectPayload& Payload);
 
 	/**
-	 * Blueprint version of Filter() method.
+	 * Whether or not the payload target has been filtered.
+	 *
+	 * The fact that something has been filtered out means
+	 * that it should be discarded from the flow.
+	 * Whether it is applying an effect or checking whether an
+	 * effect can be applied to an actor, if it is filtered out,
+	 * the given actor should NOT get any effect.
+	 *
+	 * @param Payload Payload used in the filtering process.
+	 * @return If true, actor is filtered (discarded from the flow).
 	 */
-	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Filter"))
-	bool InvokeFilter(const AActor* actor) const;
+	UFUNCTION(BlueprintCallable)
+	bool Filter(const FRuneEffectPayload& Payload) const;
 
 	/**
-	 * Intermediate Apply() method used in the filtering process.
+	 * Initialize the activation of the effect with a given payload.
+	 *
+	 * @param Payload Structure containing activation data.
 	 */
 	UFUNCTION()
-	virtual FRuneEffectHandle Activate(const FRuneEffectPayload& Payload);
+	FRuneEffectHandle Activate(const FRuneEffectPayload& Payload);
 
 	/**
-	 * Intermediate Apply() method used in the filtering process.
+	 * Shuts down the lifetime of an activated effect given a valid handle.
+	 *
+	 * @param Handle Valid activation handle.
 	 */
 	UFUNCTION()
-	void ActivateRaw(const FRuneEffectPayload& Payload);
-
-	/**
-	 * Intermediate Revert() method used in the filtering process.
-	 * Filtering is not needed. Deactivation implies a previous filtered 
-	 * and successfully activation.
-	 */
-	UFUNCTION()
-	virtual void Deactivate(const FRuneEffectHandle& Handle);
+	void Deactivate(const FRuneEffectHandle& Handle);
 
 public:
 	/** Whether the effect should use a custom filter */
 	UPROPERTY(EditAnywhere, Category = "RuneEffect: General Settings")
-	bool overrideFilter;
+	bool bOverrideFilter;
 
 	/** Filter that overrides the global used filter */
 	UPROPERTY(EditAnywhere, Category = "RuneEffect: General Settings", meta = (EditCondition = "overrideFilter==true", EditConditionHides))
-	URuneFilter* customFilter;
+	class URuneFilter* CustomFilter;
 
 	/** Application Mode should be used */
 	UPROPERTY(EditAnywhere, Category = "RuneEffect: General Settings", Instanced, NoClear, meta = (NoResetToDefault))
@@ -179,11 +131,11 @@ public:
 
 	/** Delegate invoked when a effect has been applied */
 	UPROPERTY(BlueprintAssignable, Category = "RuneEffect: General Settings")
-	FEffectApplicationDelegate onEffectApplied;
+	FEffectApplicationDelegate OnEffectApplied;
 
 	/** Delegate invoked when a effect has been reverted */
 	UPROPERTY(BlueprintAssignable, Category = "RuneEffect: General Settings")
-	FEffectApplicationDelegate onEffectReverted;
+	FEffectApplicationDelegate OnEffectReverted;
 
 protected:
 	/**
@@ -192,15 +144,7 @@ protected:
 	 * Although it could be done, this should not be modified dynamically.
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "RuneEffect: General Settings", meta = (Bitmask, BitmaskEnum = ERuneFilterFaction, DisplayAfter = "overrideFilter"))
-	uint8 filterFaction;
-
-	/** Cached instigator. It could be nullptr. */
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "RuneEffect: Debug Variables")
-	AController* runeInstigator;
-
-	/** Cached instigator RuneFilter. It could be nullptr. */
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "RuneEffect: Debug Variables")
-	const URuneFilter* instigatorFilter;
+	uint8 FilterFaction;
 
 private:
 	friend class URuneEffectApplicationMode;

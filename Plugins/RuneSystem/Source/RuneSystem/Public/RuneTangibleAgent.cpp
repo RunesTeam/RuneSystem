@@ -56,7 +56,8 @@ bool ARuneTangibleAgent::TryApplyEffects(AActor* actor)
 		{
 			FRuneEffectPayload Payload;
 			Payload.Target = actor;
-			Payload.Instigator = effect->GetInstigator();
+			// TODO: Get the instigator somehow
+			//Payload.Instigator = effect->GetInstigator();
 			Payload.Causer = this;
 
 			URuneUtils::ActivateEffect(effect, Payload);
@@ -104,7 +105,8 @@ bool ARuneTangibleAgent::CheckForApplicableEffects(AActor* actor)
 	{
 		if (effect != nullptr)
 		{
-			result |= !effect->Filter(*actor);
+			// TODO: return back the filtering somehow
+			//result |= !effect->Filter(*actor);
 		}
 	}
 	return result;

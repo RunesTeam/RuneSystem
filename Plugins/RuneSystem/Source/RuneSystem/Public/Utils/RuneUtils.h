@@ -20,14 +20,29 @@ class URuneUtils : public UBlueprintFunctionLibrary
 	
 public:
 	/**
-	 * Applies an effect to a given target actor.
+	 * Creates an instance of an effect.
+	 * 
+	 * @param EffectClass Effect to instantiate
+	 * @param OutApplicationModeInstance Application Mode instance
+	 * @param bOverrideApplicationMode Whether or not to override the default application mode
+	 * @param ApplicationModeClass Application Mode class to override with
+	 * @return Rune Effect instance
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Rune System|Rune Effect", meta = (HideSelfPin))
+	static URuneEffect* CreateEffectInstance(
+		UPARAM(meta = (AllowAbstract = "false")) const TSubclassOf<class URuneEffect> EffectClass,
+		UPARAM(DisplayName = "Application Mode") class URuneEffectApplicationMode*& OutApplicationModeInstance,
+		bool bOverrideApplicationMode = false,
+		const TSubclassOf<class URuneEffectApplicationMode> ApplicationModeClass = nullptr);
+
+	/**
+	 * Activates an effect with a given payload.
 	 *
-	 * @param effect Effect to be applied
-	 * @param instigator Controller that will spawn and/or control the causer
-	 * @param causer Actor which will apply the effect application.
-	 * @param target Actor which will receive the effect application.
-	 * @return Whether or not it was possible to apply the effect
-	*/
+	 * @param EffectClass Effect to be applied
+	 * @param Payload Application data payload
+	 * @param OutEffect Applied effect instance.
+	 * @return Handle representing the application of the effect
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Rune System|Rune Effect", meta = (DeterminesOutputType = "EffectClass", DynamicOutputParam = "OutEffect", HideSelfPin))
 	static FRuneEffectHandle ActivateEffectByClass(
 		UPARAM(meta = (AllowAbstract = "false")) const TSubclassOf<class URuneEffect> EffectClass, 
@@ -35,23 +50,19 @@ public:
 		class URuneEffect*& OutEffect);
 
 	/**
-	 * Applies an effect to a given target actor.
+	 * Activates an effect with a given payload.
 	 *
-	 * @param effect Effect to be applied
-	 * @param instigator Controller that will spawn and/or control the causer
-	 * @param causer Actor which will apply the effect application.
-	 * @param target Actor which will receive the effect application.
-	 * @return Whether or not it was possible to apply the effect
+	 * @param Effect Effect instance to be applied
+	 * @param Payload Application data payload
+	 * @return Handle representing the application of the effect
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Rune System|Rune Effect", meta = (DefaultToSelf = "Effect", HideSelfPin))
 	static FRuneEffectHandle ActivateEffect(class URuneEffect* Effect, const FRuneEffectPayload& Payload);
 
 	/**
-	 * Reverts an effect of a given target actor.
+	 * Deactivates an effect given its application handle.
 	 *
-	 * @param effect Effect to be reverted
-	 * @param target Actor which will receive the effect "undo".
-	 * @return Whether or not it was possible to revert the effect
+	 * @param Handle Effect application to be deactivated
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Rune System|Rune Effect", meta = (DefaultToSelf = "Effect", HideSelfPin))
 	static void DeactivateEffect(const FRuneEffectHandle& Handle);

@@ -2,19 +2,16 @@
 
 
 #include "RuneEffect.h"
-#include "RuneCompatible.h"
+#include "RuneSystem.h"
 #include "RuneFilter.h"
 #include "ApplicationMode/InstantRuneEffectApplicationMode.h"
-#include "RuneSystem.h"
 
 
 URuneEffect::URuneEffect() :
-	overrideFilter(false),
-	customFilter(nullptr),
+	bOverrideFilter(false),
+	CustomFilter(nullptr),
 	ApplicationMode(nullptr),
-	filterFaction(static_cast<uint8>(ERuneFilterFaction::FACTION_B)),
-	runeInstigator(nullptr),
-	instigatorFilter(nullptr)
+	FilterFaction(static_cast<uint8>(ERuneFilterFaction::FACTION_B))
 {
 	ApplicationMode = CreateDefaultSubobject<UInstantRuneEffectApplicationMode>("Application Mode");
 }
@@ -24,7 +21,7 @@ bool URuneEffect::CanEditChange(const FProperty* InProperty) const
 {
 	const bool result = Super::CanEditChange(InProperty);
 
-	if (InProperty->GetFName() == GET_MEMBER_NAME_CHECKED(URuneEffect, filterFaction))
+	if (InProperty->GetFName() == GET_MEMBER_NAME_CHECKED(URuneEffect, FilterFaction))
 	{
 		return result;// && !HasBegunPlay();
 	}
@@ -33,56 +30,24 @@ bool URuneEffect::CanEditChange(const FProperty* InProperty) const
 }
 #endif
 
-const URuneFilter* URuneEffect::GetUsedFilter() const
+bool URuneEffect::Filter(const FRuneEffectPayload& Payload) const
 {
-	if (!overrideFilter)
-	{
-		return instigatorFilter;
-	}
-	return customFilter;
-}
+	check(IsValid(Payload.Target) && IsValid(Payload.RuneFilter));
 
-AController* URuneEffect::GetInstigator() const
-{
-	return runeInstigator;
-}
-
-void URuneEffect::SetInstigator(AController* instigator)
-{
-	runeInstigator = instigator;
-}
-
-const URuneFilter* URuneEffect::GetInstigatorFilter() const
-{
-	return instigatorFilter;
-}
-
-void URuneEffect::SetInstigatorFilter(const URuneFilter* filter)
-{
-	instigatorFilter = filter;
-}
-
-bool URuneEffect::Filter(const AActor& actor) const
-{
-	const URuneFilter* runeFilter = GetUsedFilter();
-	if (runeFilter == nullptr)
-	{
-		return false;
-	}
-
-	return !(filterFaction & ~runeFilter->Filter(actor, GetClass()));
+	const URuneFilter* RuneFilter = bOverrideFilter ? CustomFilter : Payload.RuneFilter;
+	return !(FilterFaction & ~RuneFilter->Filter(*Payload.Target, GetClass()));
 }
 
 void URuneEffect::SubmitApply(const FRuneEffectPayload& Payload)
 {
 	Apply(Payload);
-	onEffectApplied.Broadcast(Payload);
+	OnEffectApplied.Broadcast(Payload);
 }
 
 void URuneEffect::SubmitRevert(const FRuneEffectPayload& Payload)
 {
 	Revert(Payload);
-	onEffectReverted.Broadcast(Payload);
+	OnEffectReverted.Broadcast(Payload);
 }
 
 void URuneEffect::Apply(const FRuneEffectPayload& Payload)
@@ -97,19 +62,10 @@ void URuneEffect::Revert(const FRuneEffectPayload& Payload)
 	ReceiveRevert(Payload);
 }
 
-bool URuneEffect::InvokeFilter(const AActor* actor) const
-{
-	if (actor == nullptr)
-	{
-		return false;
-	}
-	return Filter(*actor);
-}
-
 FRuneEffectHandle URuneEffect::Activate(const FRuneEffectPayload& Payload)
 {
 	// if actor is filtered, do NOT apply the effect
-	bool bFiltered = Filter(*Payload.Target);
+	bool bFiltered = Filter(Payload);
 	if (bFiltered)
 	{
 		return FRuneEffectHandle::Invalid;
@@ -120,11 +76,6 @@ FRuneEffectHandle URuneEffect::Activate(const FRuneEffectPayload& Payload)
 	ApplicationMode->HandleEffectActivation(Handle);
 
 	return Handle;
-}
-
-void URuneEffect::ActivateRaw(const FRuneEffectPayload& Payload)
-{
-	Activate(Payload);
 }
 
 void URuneEffect::Deactivate(const FRuneEffectHandle& Handle)

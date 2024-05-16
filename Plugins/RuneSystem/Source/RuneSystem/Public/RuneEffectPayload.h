@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "RuneFilter.h"
 #include "RuneEffectPayload.generated.h"
 
 
@@ -16,6 +17,7 @@ struct FRuneEffectPayload
 
 	FRuneEffectPayload() :
 		Target(nullptr),
+		RuneFilter(nullptr),
 		Instigator(nullptr),
 		Causer(nullptr),
 		UserData(nullptr)
@@ -23,6 +25,9 @@ struct FRuneEffectPayload
 
 	UPROPERTY(BlueprintReadOnly)
 	AActor* Target;
+
+	UPROPERTY(BlueprintReadOnly)
+	URuneFilter* RuneFilter;
 
 	UPROPERTY(BlueprintReadOnly)
 	AActor* Instigator;
@@ -44,6 +49,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Rune System|Rune Effect", meta = (BlueprintThreadSafe))
 	static FRuneEffectPayload MakeRuneEffectPayload(
 		AActor* Target,
+		URuneFilter* RuneFilter,
 		AActor* Instigator,
 		AActor* Causer,
 		UObject* UserData
@@ -51,10 +57,11 @@ public:
 
 };
 
-inline FRuneEffectPayload URuneEffectPayloadHelperLibrary::MakeRuneEffectPayload(AActor* Target, AActor* Instigator, AActor* Causer, UObject* UserData)
+inline FRuneEffectPayload URuneEffectPayloadHelperLibrary::MakeRuneEffectPayload(AActor* Target, URuneFilter* RuneFilter, AActor* Instigator, AActor* Causer, UObject* UserData)
 {
 	FRuneEffectPayload Payload;
 	Payload.Target = Target;
+	Payload.RuneFilter = RuneFilter;
 	Payload.Instigator = Instigator;
 	Payload.Causer = Causer;
 	Payload.UserData = UserData;
