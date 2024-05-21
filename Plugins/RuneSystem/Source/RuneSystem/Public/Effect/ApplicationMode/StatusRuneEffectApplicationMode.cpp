@@ -2,8 +2,9 @@
 
 
 #include "StatusRuneEffectApplicationMode.h"
-#include "RuneEffect.h"
 #include "RuneSystem.h"
+#include "Effect/RuneEffect.h"
+#include "Effect/RuneEffectHandle.h"
 
 
 UStatusRuneEffectApplicationMode::UStatusRuneEffectApplicationMode() :
@@ -13,6 +14,8 @@ UStatusRuneEffectApplicationMode::UStatusRuneEffectApplicationMode() :
 
 void UStatusRuneEffectApplicationMode::HandleEffectActivation(const FRuneEffectHandle& Handle)
 {
+	Super::HandleEffectActivation(Handle);
+
 	check(IsValid(Handle.Payload.Target));
 
 	SubmitApply(Handle);
@@ -34,15 +37,17 @@ void UStatusRuneEffectApplicationMode::HandleEffectActivation(const FRuneEffectH
 			Duration,
 			false);
 
-		URuneSystem::SetEffectHandleApplicationData(Handle, ApplicationData);
+		URuneSystem::SetEffectHandleApplicationData(this, Handle, ApplicationData);
 	}
 }
 
 void UStatusRuneEffectApplicationMode::HandleEffectDeactivation(const FRuneEffectHandle& Handle)
 {
+	Super::HandleEffectDeactivation(Handle);
+
 	SubmitRevert(Handle);
 
-	UStatusRuneEffectApplicationData* ApplicationData = Cast<UStatusRuneEffectApplicationData>(URuneSystem::GetEffectHandleApplicationData(Handle));
+	UStatusRuneEffectApplicationData* ApplicationData = Cast<UStatusRuneEffectApplicationData>(URuneSystem::GetEffectHandleApplicationData(this, Handle));
 	if (IsValid(ApplicationData) && ApplicationData->TimerHandle.IsValid())
 	{
 		Handle.Payload.Target->GetWorldTimerManager().ClearTimer(ApplicationData->TimerHandle);

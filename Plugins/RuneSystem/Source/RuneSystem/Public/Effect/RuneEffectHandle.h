@@ -18,12 +18,9 @@ struct FRuneEffectHandle
 {
 	GENERATED_BODY()
 
+public:
 	FRuneEffectHandle() = default;
-	FRuneEffectHandle(URuneEffect* Effect, const FRuneEffectPayload& Payload) :
-		ID(FGuid::NewGuid()),
-		Effect(Effect),
-		Payload(Payload)
-	{}
+	FRuneEffectHandle(URuneEffect* Effect, const FRuneEffectPayload& Payload);
 
 public:
 	UPROPERTY()
@@ -39,5 +36,3 @@ public:
 	static const FRuneEffectHandle Invalid;
 
 };
-
-inline const FRuneEffectHandle FRuneEffectHandle::Invalid = {};

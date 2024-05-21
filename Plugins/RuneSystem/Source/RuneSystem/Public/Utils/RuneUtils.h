@@ -10,7 +10,6 @@
 #include "RuneTangibleAgent.h"
 #include "RunePreviewAgent.h"
 #include "RuneCompatible.h"
-#include "RuneEffectHandle.h"
 #include "RuneUtils.generated.h"
 
 UCLASS()
@@ -19,54 +18,6 @@ class URuneUtils : public UBlueprintFunctionLibrary
 	GENERATED_BODY()
 	
 public:
-	/**
-	 * Creates an instance of an effect.
-	 * 
-	 * @param EffectClass Effect to instantiate
-	 * @param OutApplicationModeInstance Application Mode instance
-	 * @param bOverrideApplicationMode Whether or not to override the default application mode
-	 * @param ApplicationModeClass Application Mode class to override with
-	 * @return Rune Effect instance
-	 */
-	UFUNCTION(BlueprintCallable, Category = "Rune System|Rune Effect", meta = (HideSelfPin))
-	static URuneEffect* CreateEffectInstance(
-		UPARAM(meta = (AllowAbstract = "false")) const TSubclassOf<class URuneEffect> EffectClass,
-		UPARAM(DisplayName = "Application Mode") class URuneEffectApplicationMode*& OutApplicationModeInstance,
-		bool bOverrideApplicationMode = false,
-		const TSubclassOf<class URuneEffectApplicationMode> ApplicationModeClass = nullptr);
-
-	/**
-	 * Activates an effect with a given payload.
-	 *
-	 * @param EffectClass Effect to be applied
-	 * @param Payload Application data payload
-	 * @param OutEffect Applied effect instance.
-	 * @return Handle representing the application of the effect
-	 */
-	UFUNCTION(BlueprintCallable, Category = "Rune System|Rune Effect", meta = (DeterminesOutputType = "EffectClass", DynamicOutputParam = "OutEffect", HideSelfPin))
-	static FRuneEffectHandle ActivateEffectByClass(
-		UPARAM(meta = (AllowAbstract = "false")) const TSubclassOf<class URuneEffect> EffectClass, 
-		const FRuneEffectPayload& Payload, 
-		class URuneEffect*& OutEffect);
-
-	/**
-	 * Activates an effect with a given payload.
-	 *
-	 * @param Effect Effect instance to be applied
-	 * @param Payload Application data payload
-	 * @return Handle representing the application of the effect
-	 */
-	UFUNCTION(BlueprintCallable, Category = "Rune System|Rune Effect", meta = (DefaultToSelf = "Effect", HideSelfPin))
-	static FRuneEffectHandle ActivateEffect(class URuneEffect* Effect, const FRuneEffectPayload& Payload);
-
-	/**
-	 * Deactivates an effect given its application handle.
-	 *
-	 * @param Handle Effect application to be deactivated
-	 */
-	UFUNCTION(BlueprintCallable, Category = "Rune System|Rune Effect", meta = (DefaultToSelf = "Effect", HideSelfPin))
-	static void DeactivateEffect(const FRuneEffectHandle& Handle);
-
 	template <class T, typename... Args>
 	static T* SpawnTangibleAgent(const URuneBehaviour& behaviour, UClass* InClass, Args... args);
 

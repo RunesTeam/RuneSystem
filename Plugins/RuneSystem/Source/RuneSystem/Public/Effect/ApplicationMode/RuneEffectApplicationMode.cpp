@@ -1,7 +1,8 @@
 
 
 #include "RuneEffectApplicationMode.h"
-#include "RuneEffect.h"
+#include "Effect/RuneEffect.h"
+#include "Effect/RuneEffectHandle.h"
 
 
 void URuneEffectApplicationMode::HandleEffectActivation(const FRuneEffectHandle& Handle)

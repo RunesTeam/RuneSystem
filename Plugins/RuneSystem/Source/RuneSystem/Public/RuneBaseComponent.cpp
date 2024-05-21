@@ -5,7 +5,7 @@
 #include "RuneBehaviour.h"
 #include "RuneCastStateMachine.h"
 #include "RuneCompatible.h"
-#include "RuneEffect.h"
+#include "Effect/RuneEffect.h"
 
 
 URuneBaseComponent::URuneBaseComponent() : runeCastStateMachine(nullptr)

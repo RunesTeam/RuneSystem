@@ -32,9 +32,13 @@ bool URuneEffect::CanEditChange(const FProperty* InProperty) const
 
 bool URuneEffect::Filter(const FRuneEffectPayload& Payload) const
 {
-	check(IsValid(Payload.Target) && IsValid(Payload.RuneFilter));
+	check(IsValid(Payload.Target));
 
 	const URuneFilter* RuneFilter = bOverrideFilter ? CustomFilter : Payload.RuneFilter;
+	if (!IsValid(RuneFilter))
+	{
+		return false;
+	}
 	return !(FilterFaction & ~RuneFilter->Filter(*Payload.Target, GetClass()));
 }
 

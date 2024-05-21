@@ -7,13 +7,17 @@
 #include "EoTRuneEffectApplicationMode.generated.h"
 
 
+/**
+ * Effect Over Time (EoT) Application Mode activates a timer that applies the effect over a given target.
+ * Deactivation ensures the timer is cleared on finished, interrupted or canceled.
+ */
 UCLASS(Blueprintable, EditInlineNew, AutoExpandCategories = "EoTRuneEffectApplicationMode: General Settings", HideCategories = ("ComponentTick", Tags, AssetUserData, ComponentReplication, Activation, Variable, Sockets, Collision, Cooking))
 class RUNESYSTEM_API UEoTRuneEffectApplicationMode : public URuneEffectApplicationMode
 {
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this component's properties
+	// Sets default values for this object's properties
 	UEoTRuneEffectApplicationMode();
 
 #if WITH_EDITOR
@@ -30,8 +34,21 @@ public:
 #endif
 
 public:
-	virtual void HandleEffectActivation(const FRuneEffectHandle& Handle) override;
-	virtual void HandleEffectDeactivation(const FRuneEffectHandle& Handle) override;
+	/**
+	 * Handles how an effect is activated.
+	 * Typically it would also handle the application of the effect.
+	 *
+	 * @param Handle Valid effect activation handle
+	 */
+	virtual void HandleEffectActivation(const FRuneEffectHandle& Handle);
+
+	/**
+	 * Handles how an effect is deactivated.
+	 * Typically it would handle effect cancellation, interruption, etc.
+	 *
+	 * @param Handle Valid effect activation handle
+	 */
+	virtual void HandleEffectDeactivation(const FRuneEffectHandle& Handle);
 
 public:
 	/**
@@ -63,6 +80,7 @@ public:
 };
 
 
+/** Effect Over Time (EoT) Application Mode Data */
 UCLASS()
 class RUNESYSTEM_API UEoTRuneEffectApplicationData : public UObject
 {

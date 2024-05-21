@@ -3,7 +3,7 @@
 
 #include "RuneTangibleAgent.h"
 #include "RunePreviewAgent.h"
-#include "RuneEffect.h"
+#include "Effect/RuneEffect.h"
 #include "RuneSystem.h"
 
 
@@ -56,11 +56,10 @@ bool ARuneTangibleAgent::TryApplyEffects(AActor* actor)
 		{
 			FRuneEffectPayload Payload;
 			Payload.Target = actor;
-			// TODO: Get the instigator somehow
-			//Payload.Instigator = effect->GetInstigator();
+			Payload.Instigator = GetInstigator();
 			Payload.Causer = this;
 
-			URuneUtils::ActivateEffect(effect, Payload);
+			URuneSystem::ActivateEffect(effect, Payload);
 		}
 	}
 	onApplyEffects.Broadcast(actor, success);
@@ -79,6 +78,7 @@ bool ARuneTangibleAgent::TryRevertEffects(AActor* actor)
 		if (effect != nullptr)
 		{
 			TArray<FRuneEffectHandle> Handles = URuneSystem::GetEffectHandlesByPredicate(
+				this,
 				[actor, this](const FRuneEffectHandle& Handle)
 				{
 					return attachedRuneEffects.Contains(Handle.Effect) && Handle.Payload.Target == actor;
@@ -86,7 +86,7 @@ bool ARuneTangibleAgent::TryRevertEffects(AActor* actor)
 
 			for (const FRuneEffectHandle& Handle : Handles)
 			{
-				URuneUtils::DeactivateEffect(Handle);
+				URuneSystem::DeactivateEffect(Handle);
 			}
 		}
 	}

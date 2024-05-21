@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include <Templates/Invoke.h>
-#include "RuneEffectHandle.h"
+#include "Effect/RuneEffectHandle.h"
 #include "RuneSystem.generated.h"
 
 
@@ -40,14 +40,110 @@ protected:
 	virtual bool DoesSupportWorldType(EWorldType::Type WorldType) const override;
 
 public:
+	/**
+	 * Creates an instance of an effect.
+	 *
+	 * @param EffectClass Effect to instantiate
+	 * @param OutApplicationModeInstance Application Mode instance
+	 * @param OverrideApplicationModeClass Application Mode class to override with. If None, there is no override.
+	 * @return Rune Effect instance
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Rune System|Effect", meta = (HideSelfPin, WorldContext = "WorldContextObject"))
+	static URuneEffect* CreateEffectInstance(
+		UObject* WorldContextObject,
+		UPARAM(meta = (AllowAbstract = "false")) const TSubclassOf<class URuneEffect> EffectClass,
+		UPARAM(DisplayName = "Application Mode") class URuneEffectApplicationMode*& OutApplicationModeInstance,
+		const TSubclassOf<class URuneEffectApplicationMode> OverrideApplicationModeClass = nullptr);
+
+	/**
+	 * Activates an effect with a given payload.
+	 *
+	 * @param EffectClass Effect to be applied
+	 * @param Payload Application data payload
+	 * @param OutEffect Applied effect instance.
+	 * @return Handle representing the application of the effect
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Rune System|Effect", meta = (WorldContext = "WorldContextObject", DeterminesOutputType = "EffectClass", DynamicOutputParam = "OutEffect", HideSelfPin))
+	static FRuneEffectHandle ActivateEffectByClass(
+		UObject* WorldContextObject,
+		UPARAM(meta = (AllowAbstract = "false")) const TSubclassOf<class URuneEffect> EffectClass,
+		const FRuneEffectPayload& Payload,
+		class URuneEffect*& OutEffect);
+
+	/**
+	 * Activates an effect with a given payload.
+	 *
+	 * @param Effect Effect instance to be applied
+	 * @param Payload Application data payload
+	 * @return Handle representing the application of the effect
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Rune System|Effect", meta = (DefaultToSelf = "Effect", HideSelfPin))
+	static FRuneEffectHandle ActivateEffect(class URuneEffect* Effect, const FRuneEffectPayload& Payload);
+
+	/**
+	 * Deactivates an effect given its application handle.
+	 *
+	 * @param Handle Effect application to be deactivated
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Rune System|Effect", meta = (DefaultToSelf = "Effect", HideSelfPin))
+	static void DeactivateEffect(const FRuneEffectHandle& Handle);
+
+	/**
+	 * Creates a new activation handle given an effect and its payload.
+	 * Manual dispose is required.
+	 * 
+	 * @param Effect Effect the activation handle represents
+	 * @param Payload Effect payload
+	 * @return An effect application handle
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Rune System|Effect", meta = (CallableWithoutWorldContext))
 	static FRuneEffectHandle& CreateEffectHandle(URuneEffect* Effect, const FRuneEffectPayload& Payload);
+
+	/**
+	 * Dispose an effect application handle.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Rune System|Effect", meta = (CallableWithoutWorldContext))
 	static void DisposeEffectHandle(const FRuneEffectHandle& Handle);
 
-	template<typename Predicate>
-	static TArray<FRuneEffectHandle> GetEffectHandlesByPredicate(Predicate Pred);
+	/**
+	 * Gets all effect handles that matches the given predicate.
+	 *
+	 * @param WorldContextObject World Context
+	 * @return All matching handles
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Rune System|Effect", meta = (WorldContext = "WorldContextObject"))
+	static const TArray<FRuneEffectHandle>& GetEffectHandles(const UObject* WorldContextObject);
 
-	static UObject* GetEffectHandleApplicationData(const FRuneEffectHandle& Handle);
-	static void SetEffectHandleApplicationData(const FRuneEffectHandle& Handle, UObject* Data);
+	/**
+	 * Gets the application data object associated to a given handle.
+	 * 
+	 * @param WorldContextObject World Context
+	 * @param Handle A valid effect application handle
+	 * @return Object associated to the given handle
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Rune System|Effect Application Mode", meta = (WorldContext = "WorldContextObject"))
+	static UObject* GetEffectHandleApplicationData(const UObject* WorldContextObject, const FRuneEffectHandle& Handle);
+
+	/**
+	 * Sets an application data object associated to a given handle.
+	 *
+	 * @param WorldContextObject World Context
+	 * @param Handle A valid effect application handle
+	 * @param Data A valid effect application handle
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Rune System|Effect Application Mode", meta = (WorldContext = "WorldContextObject"))
+	static void SetEffectHandleApplicationData(const UObject* WorldContextObject, const FRuneEffectHandle& Handle, UObject* Data);
+
+	/**
+	 * Gets all effect handles that matches the given predicate.
+	 * 
+	 * @return All matching handles
+	 */
+	template<typename Predicate>
+	static TArray<FRuneEffectHandle> GetEffectHandlesByPredicate(const UObject* WorldContextObject, Predicate Pred);
+
+private:
+	static URuneSystem* GetRuneSystem(const UObject* WorldContextObject);
 
 private:
 	FRuneEffectHandle& CreateEffectHandleImpl(URuneEffect* Effect, const FRuneEffectPayload& Payload);
@@ -63,16 +159,13 @@ private:
 	UPROPERTY()
 	TMap<FGuid, UObject*> HandleApplicationData;
 
-private:
-	static URuneSystem* s_Instance;
-
 };
 
 template<typename Predicate>
-inline TArray<FRuneEffectHandle> URuneSystem::GetEffectHandlesByPredicate(Predicate Pred)
+inline TArray<FRuneEffectHandle> URuneSystem::GetEffectHandlesByPredicate(const UObject* WorldContextObject, Predicate Pred)
 {
 	TArray<FRuneEffectHandle> Result;
-	for (const FRuneEffectHandle& Handle : s_Instance->ActiveHandles)
+	for (const FRuneEffectHandle& Handle : GetRuneSystem(WorldContextObject)->ActiveHandles)
 	{
 		if (::Invoke(Pred, Handle))
 		{

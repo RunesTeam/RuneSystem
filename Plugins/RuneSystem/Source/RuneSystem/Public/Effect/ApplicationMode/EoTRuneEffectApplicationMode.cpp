@@ -2,8 +2,9 @@
 
 
 #include "EoTRuneEffectApplicationMode.h"
-#include "RuneEffect.h"
 #include "RuneSystem.h"
+#include "Effect/RuneEffect.h"
+#include "Effect/RuneEffectHandle.h"
 
 
 UEoTRuneEffectApplicationMode::UEoTRuneEffectApplicationMode() :
@@ -40,6 +41,8 @@ bool UEoTRuneEffectApplicationMode::CanEditChange(const FProperty* InProperty) c
 
 void UEoTRuneEffectApplicationMode::HandleEffectActivation(const FRuneEffectHandle& Handle)
 {
+	Super::HandleEffectActivation(Handle);
+
 	// auxiliary variables initialization
 	// If duration is set to a negative number the number of tick will be indefinite
 	const bool bLoop = Duration < 0.0f;
@@ -77,12 +80,14 @@ void UEoTRuneEffectApplicationMode::HandleEffectActivation(const FRuneEffectHand
 			false);
 	}
 
-	URuneSystem::SetEffectHandleApplicationData(Handle, ApplicationData);
+	URuneSystem::SetEffectHandleApplicationData(this, Handle, ApplicationData);
 }
 
 void UEoTRuneEffectApplicationMode::HandleEffectDeactivation(const FRuneEffectHandle& Handle)
 {
-	UEoTRuneEffectApplicationData* ApplicationData = Cast< UEoTRuneEffectApplicationData>(URuneSystem::GetEffectHandleApplicationData(Handle));
+	Super::HandleEffectDeactivation(Handle);
+
+	UEoTRuneEffectApplicationData* ApplicationData = Cast< UEoTRuneEffectApplicationData>(URuneSystem::GetEffectHandleApplicationData(this, Handle));
 	check(IsValid(ApplicationData));
 
 	if (ApplicationData->TickTimerHandle.IsValid())

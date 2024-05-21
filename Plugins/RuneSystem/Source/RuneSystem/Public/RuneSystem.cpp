@@ -3,10 +3,9 @@
 
 #include "RuneSystem.h"
 
-#include "RuneEffect.h"
+#include "Effect/RuneEffect.h"
+#include "Effect/ApplicationMode/RuneEffectApplicationMode.h"
 
-
-URuneSystem* URuneSystem::s_Instance = nullptr;
 
 URuneSystem::URuneSystem() :
 	ActiveHandles(),
@@ -22,16 +21,11 @@ bool URuneSystem::ShouldCreateSubsystem(UObject* Outer) const
 void URuneSystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
-
-	check(s_Instance == nullptr);
-	s_Instance = this;
 }
 
 void URuneSystem::Deinitialize()
 {
 	Super::Deinitialize();
-
-	s_Instance = nullptr;
 }
 
 bool URuneSystem::DoesSupportWorldType(EWorldType::Type WorldType) const
@@ -39,26 +33,93 @@ bool URuneSystem::DoesSupportWorldType(EWorldType::Type WorldType) const
 	return WorldType == EWorldType::Game || WorldType == EWorldType::PIE;
 }
 
+URuneEffect* URuneSystem::CreateEffectInstance(UObject* WorldContextObject, const TSubclassOf<class URuneEffect> EffectClass, class URuneEffectApplicationMode*& OutApplicationModeInstance, const TSubclassOf<class URuneEffectApplicationMode> OverrideApplicationModeClass)
+{
+	if (!IsValid(EffectClass))
+	{
+		return nullptr;
+	}
+
+	URuneEffect* OutEffect = NewObject<URuneEffect>(WorldContextObject, EffectClass, TEXT("Rune Effect"), RF_Transient);
+	if (IsValid(OutEffect) && IsValid(OverrideApplicationModeClass))
+	{
+		OutEffect->ApplicationMode = NewObject<URuneEffectApplicationMode>(OutEffect, OverrideApplicationModeClass, TEXT("Rune Effect Application Mode"), RF_Transient);
+		check(IsValid(OutEffect->ApplicationMode));
+	}
+
+	return OutEffect;
+}
+
+FRuneEffectHandle URuneSystem::ActivateEffectByClass(UObject* WorldContextObject, const TSubclassOf<URuneEffect> EffectClass, const FRuneEffectPayload& Payload, URuneEffect*& OutEffect)
+{
+	if (!IsValid(EffectClass) || !IsValid(Payload.Target))
+	{
+		return FRuneEffectHandle::Invalid;
+	}
+
+	OutEffect = NewObject<URuneEffect>(WorldContextObject, EffectClass, TEXT("Rune Effect"), RF_Transient);
+	check(IsValid(OutEffect));
+
+	return OutEffect->Activate(Payload);
+}
+
+FRuneEffectHandle URuneSystem::ActivateEffect(URuneEffect* Effect, const FRuneEffectPayload& Payload)
+{
+	if (!IsValid(Effect) || !IsValid(Payload.Target))
+	{
+		return FRuneEffectHandle::Invalid;
+	}
+
+	return Effect->Activate(Payload);
+}
+
+void URuneSystem::DeactivateEffect(const FRuneEffectHandle& Handle)
+{
+	if (!IsValid(Handle.Effect) || !IsValid(Handle.Payload.Target))
+	{
+		return;
+	}
+
+	Handle.Effect->Deactivate(Handle);
+}
+
+
 FRuneEffectHandle& URuneSystem::CreateEffectHandle(URuneEffect* Effect, const FRuneEffectPayload& Payload)
 {
-	return s_Instance->CreateEffectHandleImpl(Effect, Payload);
+	return GetRuneSystem(Effect)->CreateEffectHandleImpl(Effect, Payload);
 }
 
 void URuneSystem::DisposeEffectHandle(const FRuneEffectHandle& Handle)
 {
-	s_Instance->DisposeEffectHandleImpl(Handle);
+	GetRuneSystem(Handle.Effect)->DisposeEffectHandleImpl(Handle);
 }
 
-UObject* URuneSystem::GetEffectHandleApplicationData(const FRuneEffectHandle& Handle)
+const TArray<FRuneEffectHandle>& URuneSystem::GetEffectHandles(const UObject* WorldContextObject)
 {
-	return s_Instance->GetEffectHandleApplicationDataImpl(Handle);
+	return GetRuneSystem(WorldContextObject)->ActiveHandles;
 }
 
-void URuneSystem::SetEffectHandleApplicationData(const FRuneEffectHandle& Handle, UObject* Data)
+UObject* URuneSystem::GetEffectHandleApplicationData(const UObject* WorldContextObject, const FRuneEffectHandle& Handle)
+{
+	return GetRuneSystem(WorldContextObject)->GetEffectHandleApplicationDataImpl(Handle);
+}
+
+void URuneSystem::SetEffectHandleApplicationData(const UObject* WorldContextObject, const FRuneEffectHandle& Handle, UObject* Data)
 {
 	check(Handle.ID.IsValid() && IsValid(Handle.Effect));
 	if (!IsValid(Data)) return;
-	s_Instance->SetEffectHandleApplicationDataImpl(Handle, Data);
+	GetRuneSystem(WorldContextObject)->SetEffectHandleApplicationDataImpl(Handle, Data);
+}
+
+URuneSystem* URuneSystem::GetRuneSystem(const UObject* WorldContextObject)
+{
+	check(IsValid(WorldContextObject));
+
+	UWorld* World = WorldContextObject->GetWorld();
+	check(IsValid(World));
+	check(World->HasSubsystem<URuneSystem>());
+
+	return World->GetSubsystem<URuneSystem>();
 }
 
 FRuneEffectHandle& URuneSystem::CreateEffectHandleImpl(URuneEffect* Effect, const FRuneEffectPayload& Payload)

@@ -2,12 +2,12 @@
 
 
 #include "RuneBehaviour.h"
+#include "RuneSystem.h"
 #include "RuneCompatible.h"
 #include "RuneTangibleAgent.h"
-#include "RuneEffectPayload.h"
+#include "Effect/RuneEffect.h"
+#include "Effect/RuneEffectPayload.h"
 #include "Utils/RuneUtils.h"
-#include "RuneSystem.h"
-#include "RuneEffect.h"
 
 
 URuneBehaviour::URuneBehaviour() :
@@ -150,7 +150,7 @@ bool URuneBehaviour::BroadcastApplyPulse(AActor* actor) const
 		for (UObject* Object : onApplyPulse.GetAllObjects())
 		{
 			URuneEffect* Effect = Cast<URuneEffect>(Object);
-			URuneUtils::ActivateEffect(Effect, Payload);
+			URuneSystem::ActivateEffect(Effect, Payload);
 		}
 	}
 	onApplyPulseBroadcast.Broadcast(actor, success);
@@ -167,6 +167,7 @@ bool URuneBehaviour::BroadcastRevertPulse(AActor* actor) const
 		// TODO: This should be better done
 		// onRevertPulse.Broadcast(Payload);
 		TArray<FRuneEffectHandle> Handles = URuneSystem::GetEffectHandlesByPredicate(
+			this,
 			[actor, this](const FRuneEffectHandle& Handle)
 			{
 				return onApplyPulse.GetAllObjects().Contains(Handle.Effect) && Handle.Payload.Target == actor;
@@ -174,7 +175,7 @@ bool URuneBehaviour::BroadcastRevertPulse(AActor* actor) const
 
 		for (const FRuneEffectHandle& Handle : Handles)
 		{
-			URuneUtils::DeactivateEffect(Handle);
+			URuneSystem::DeactivateEffect(Handle);
 		}
 	}
 	onRevertPulseBroadcast.Broadcast(actor, success);

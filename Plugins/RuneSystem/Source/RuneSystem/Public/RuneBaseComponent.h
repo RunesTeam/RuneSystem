@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "RuneBehaviour.h"
-#include "RuneEffect.h"
+#include "Effect/RuneEffect.h"
 #include "RuneBaseComponent.generated.h"
 
 class IRuneCompatible;

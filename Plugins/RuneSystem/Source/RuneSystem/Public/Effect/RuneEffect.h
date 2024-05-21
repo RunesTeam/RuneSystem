@@ -15,7 +15,7 @@ class RUNESYSTEM_API URuneEffect : public UObject
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FEffectApplicationDelegate, const FRuneEffectPayload&, Payload);
 
 public:
-	// Sets default values for this component's properties
+	// Sets default values for this object's properties
 	URuneEffect();
 
 #if WITH_EDITOR
@@ -150,5 +150,5 @@ private:
 	friend class URuneEffectApplicationMode;
 	friend class URuneBaseComponent;
 	friend class ARuneTangibleAgent;
-	friend class URuneUtils;
+	friend class URuneSystem;
 };
