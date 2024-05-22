@@ -39,6 +39,7 @@ bool URuneEffect::Filter(const FRuneEffectPayload& Payload) const
 	{
 		return false;
 	}
+
 	return !(FilterFaction & ~RuneFilter->Filter(*Payload.Target, GetClass()));
 }
 

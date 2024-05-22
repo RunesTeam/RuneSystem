@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include <Templates/Invoke.h>
+#include "Templates/Invoke.h"
 #include "Effect/RuneEffectHandle.h"
 #include "RuneSystem.generated.h"
 
@@ -18,6 +18,7 @@ class RUNESYSTEM_API URuneSystem : public UWorldSubsystem
 	GENERATED_BODY()
 
 public:
+	// Default values
 	URuneSystem();
 
 	/** Override to control if the Subsystem should be created at all.

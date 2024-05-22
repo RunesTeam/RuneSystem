@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "RuneEffectApplicationMode.h"
+#include "Effect/RuneEffectHandle.h"
 #include "EoTRuneEffectApplicationMode.generated.h"
 
 
@@ -74,14 +75,22 @@ public:
 	 * Time window - in seconds - between consecutive ticks.
 	 * Necessary for effects with negative (undefined) duration.
 	 */
-	UPROPERTY(EditAnywhere, Category = "EoTRuneEffectApplicationMode: General Settings", meta = (EditCondition="Duration <= 0.0f", EditConditionHides))
+	UPROPERTY(EditAnywhere, Category = "EoTRuneEffectApplicationMode: General Settings", meta = (EditCondition = "Duration <= 0.0f", EditConditionHides))
 	float TickRate;
+
+	/* Whether or not timers reset when an effect is stacked */
+	UPROPERTY(EditAnywhere, Category = "EoTRuneEffectApplicationMode: General Settings")
+	bool bStackResetsDuration;
+
+	/* Whether or not the effect application should sync all instances */
+	UPROPERTY(EditAnywhere, Category = "EoTRuneEffectApplicationMode: General Settings")
+	bool bStackSyncsApplication;
 
 };
 
 
 /** Effect Over Time (EoT) Application Mode Data */
-UCLASS()
+UCLASS(BlueprintType)
 class RUNESYSTEM_API UEoTRuneEffectApplicationData : public UObject
 {
 	GENERATED_BODY()
@@ -90,10 +99,10 @@ public:
 	UEoTRuneEffectApplicationData() = default;
 
 public:
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly)
 	FTimerHandle TickTimerHandle;
 
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly)
 	FTimerHandle DeactivationTimerHandle;
 
 };

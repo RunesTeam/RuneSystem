@@ -27,6 +27,9 @@ public:
 	FGuid ID;
 
 	UPROPERTY()
+	uint64 TimeStamp;
+
+	UPROPERTY()
 	URuneEffect* Effect;
 
 	UPROPERTY()
