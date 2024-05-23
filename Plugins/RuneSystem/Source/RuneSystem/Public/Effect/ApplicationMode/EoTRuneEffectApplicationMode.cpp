@@ -12,9 +12,8 @@ UEoTRuneEffectApplicationMode::UEoTRuneEffectApplicationMode() :
 	Ticks(5u),
 	TrimTickDistribution(true),
 	TickRate(1.0f),
-	bCanBeStacked(false),
-	StackDurationPolicy(EStackDurationPolicy::RESETS),
-	StackApplicationPolicy(EStackApplicationPolicy::SYNCRONIZED)
+	StackDurationPolicy(EStackDurationPolicy::NONE),
+	StackApplicationPolicy(EStackApplicationPolicy::UNSYNCRONIZED)
 {
 }
 
@@ -36,6 +35,11 @@ bool UEoTRuneEffectApplicationMode::CanEditChange(const FProperty* InProperty) c
 	if (InProperty->GetFName() == GET_MEMBER_NAME_CHECKED(UEoTRuneEffectApplicationMode, TickRate))
 	{
 		return Result && Duration <= 0.0f;
+	}
+
+	if (InProperty->GetFName() == GET_MEMBER_NAME_CHECKED(UEoTRuneEffectApplicationMode, StackDurationPolicy))
+	{
+		return Result && Duration > 0.0f;
 	}
 
 	return Result;
@@ -98,6 +102,9 @@ void UEoTRuneEffectApplicationMode::HandleEffectActivation(const FRuneEffectHand
 	URuneSystem::SetEffectHandleApplicationData(this, Handle, ApplicationData);
 
 	// Handle stack application
+	const bool bCanBeStacked =
+		StackDurationPolicy != EStackDurationPolicy::NONE ||
+		StackApplicationPolicy != EStackApplicationPolicy::UNSYNCRONIZED;
 	if (bCanBeStacked)
 	{
 		TArray<FRuneEffectHandle> ActiveApplicationHandles = URuneSystem::GetEffectHandlesByPredicate(

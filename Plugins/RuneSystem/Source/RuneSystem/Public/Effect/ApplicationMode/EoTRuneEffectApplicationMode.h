@@ -79,16 +79,12 @@ public:
 	UPROPERTY(EditAnywhere, Category = "EoTRuneEffectApplicationMode: General Settings")
 	float TickRate;
 
-	/* Whether or not the effect application can be stacked */
-	UPROPERTY(EditAnywhere, Category = "EoTRuneEffectApplicationMode: General Settings")
-	bool bCanBeStacked;
-
 	/* Which policy the effect duration follows. Valid with non negative duration. */
-	UPROPERTY(EditAnywhere, Category = "EoTRuneEffectApplicationMode: General Settings", meta = (EditCondition = "bCanBeStacked == true", EditConditionHides))
+	UPROPERTY(EditAnywhere, Category = "EoTRuneEffectApplicationMode: General Settings")
 	EStackDurationPolicy StackDurationPolicy;
 
 	/* Which policy the effect application follows */
-	UPROPERTY(EditAnywhere, Category = "EoTRuneEffectApplicationMode: General Settings", meta = (EditCondition = "bCanBeStacked == true", EditConditionHides))
+	UPROPERTY(EditAnywhere, Category = "EoTRuneEffectApplicationMode: General Settings")
 	EStackApplicationPolicy StackApplicationPolicy;
 
 };
