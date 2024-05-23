@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "RuneEffectApplicationMode.h"
+#include "StackedRuneEffectApplicationMode.h"
 #include "Effect/RuneEffectHandle.h"
 #include "EoTRuneEffectApplicationMode.generated.h"
 
@@ -60,7 +61,7 @@ public:
 	float Duration;
 
 	/** How many times should the effect be applied. */
-	UPROPERTY(EditAnywhere, Category = "EoTRuneEffectApplicationMode: General Settings", meta = (EditCondition = "Duration > 0.0f", EditConditionHides))
+	UPROPERTY(EditAnywhere, Category = "EoTRuneEffectApplicationMode: General Settings")
 	uint32 Ticks;
 
 	/**
@@ -68,23 +69,27 @@ public:
 	 * - If true:	|__|__|__|__|
 	 * - If false:	_|_|_|_|_|_
 	 */
-	UPROPERTY(EditAnywhere, Category = "EoTRuneEffectApplicationMode: General Settings", meta = (EditCondition = "Duration > 0.0f", EditConditionHides))
+	UPROPERTY(EditAnywhere, Category = "EoTRuneEffectApplicationMode: General Settings")
 	bool TrimTickDistribution;
 
 	/**
 	 * Time window - in seconds - between consecutive ticks.
 	 * Necessary for effects with negative (undefined) duration.
 	 */
-	UPROPERTY(EditAnywhere, Category = "EoTRuneEffectApplicationMode: General Settings", meta = (EditCondition = "Duration <= 0.0f", EditConditionHides))
+	UPROPERTY(EditAnywhere, Category = "EoTRuneEffectApplicationMode: General Settings")
 	float TickRate;
 
-	/* Whether or not timers reset when an effect is stacked */
+	/* Whether or not the effect application can be stacked */
 	UPROPERTY(EditAnywhere, Category = "EoTRuneEffectApplicationMode: General Settings")
-	bool bStackResetsDuration;
+	bool bCanBeStacked;
 
-	/* Whether or not the effect application should sync all instances */
-	UPROPERTY(EditAnywhere, Category = "EoTRuneEffectApplicationMode: General Settings")
-	bool bStackSyncsApplication;
+	/* Which policy the effect duration follows. Valid with non negative duration. */
+	UPROPERTY(EditAnywhere, Category = "EoTRuneEffectApplicationMode: General Settings", meta = (EditCondition = "bCanBeStacked == true", EditConditionHides))
+	EStackDurationPolicy StackDurationPolicy;
+
+	/* Which policy the effect application follows */
+	UPROPERTY(EditAnywhere, Category = "EoTRuneEffectApplicationMode: General Settings", meta = (EditCondition = "bCanBeStacked == true", EditConditionHides))
+	EStackApplicationPolicy StackApplicationPolicy;
 
 };
 
