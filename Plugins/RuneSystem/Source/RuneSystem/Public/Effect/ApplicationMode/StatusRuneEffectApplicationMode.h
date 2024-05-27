@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "RuneEffectApplicationMode.h"
+#include "StackedRuneEffectApplicationMode.h"
 #include "StatusRuneEffectApplicationMode.generated.h"
 
 
@@ -44,6 +45,14 @@ public:
 	 */
 	UPROPERTY(EditAnywhere, Category = "StatusRuneEffectApplicationMode: General Settings")
 	float Duration;
+
+	/** Which policy the effect duration follows. Valid with non negative duration. */
+	UPROPERTY(EditAnywhere, Category = "StatusRuneEffectApplicationMode: Stack Settings")
+	EStackDurationPolicy StackDurationPolicy;
+
+	/** How many effects can be stacked at a time. If set to 0, infinite stack count */
+	UPROPERTY(EditAnywhere, Category = "StatusRuneEffectApplicationMode: Stack Settings", meta = (EditCondition = "StackDurationPolicy != EStackDurationPolicy::NONE"))
+	uint32 MaxStackCount;
 
 };
 

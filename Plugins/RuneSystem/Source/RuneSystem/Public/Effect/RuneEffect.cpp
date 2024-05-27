@@ -4,6 +4,7 @@
 #include "RuneEffect.h"
 #include "RuneSystem.h"
 #include "RuneFilter.h"
+#include "RuneEffectPayload.h"
 #include "ApplicationMode/InstantRuneEffectApplicationMode.h"
 
 
@@ -19,14 +20,14 @@ URuneEffect::URuneEffect() :
 #if WITH_EDITOR
 bool URuneEffect::CanEditChange(const FProperty* InProperty) const
 {
-	const bool result = Super::CanEditChange(InProperty);
+	const bool Result = Super::CanEditChange(InProperty);
 
 	if (InProperty->GetFName() == GET_MEMBER_NAME_CHECKED(URuneEffect, FilterFaction))
 	{
-		return result;// && !HasBegunPlay();
+		return Result;
 	}
 
-	return result;
+	return Result;
 }
 #endif
 

@@ -13,7 +13,8 @@ UEoTRuneEffectApplicationMode::UEoTRuneEffectApplicationMode() :
 	TrimTickDistribution(true),
 	TickRate(1.0f),
 	StackDurationPolicy(EStackDurationPolicy::NONE),
-	StackApplicationPolicy(EStackApplicationPolicy::UNSYNCRONIZED)
+	StackApplicationPolicy(EStackApplicationPolicy::UNSYNCRONIZED),
+	MaxStackCount(0u)
 {
 }
 
@@ -35,11 +36,6 @@ bool UEoTRuneEffectApplicationMode::CanEditChange(const FProperty* InProperty) c
 	if (InProperty->GetFName() == GET_MEMBER_NAME_CHECKED(UEoTRuneEffectApplicationMode, TickRate))
 	{
 		return Result && Duration <= 0.0f;
-	}
-
-	if (InProperty->GetFName() == GET_MEMBER_NAME_CHECKED(UEoTRuneEffectApplicationMode, StackDurationPolicy))
-	{
-		return Result && Duration > 0.0f;
 	}
 
 	return Result;
@@ -158,6 +154,14 @@ void UEoTRuneEffectApplicationMode::HandleEffectActivation(const FRuneEffectHand
 
 			bLocalStackHandled = true;
 		}
+
+		// If we have passed the max stack count, force this application 
+		// to be disposed after reseting timers if needed
+		const uint32 TotalStackCount = ActiveApplicationHandles.Num() + 1;
+		if (TotalStackCount > MaxStackCount)
+		{
+			SubmitDeactivation(Handle);
+		}
 	}
 }
 
@@ -171,5 +175,10 @@ void UEoTRuneEffectApplicationMode::HandleEffectDeactivation(const FRuneEffectHa
 	if (ApplicationData->TickTimerHandle.IsValid())
 	{
 		Handle.Payload.Target->GetWorldTimerManager().ClearTimer(ApplicationData->TickTimerHandle);
+	}
+
+	if (ApplicationData->DeactivationTimerHandle.IsValid())
+	{
+		Handle.Payload.Target->GetWorldTimerManager().ClearTimer(ApplicationData->DeactivationTimerHandle);
 	}
 }

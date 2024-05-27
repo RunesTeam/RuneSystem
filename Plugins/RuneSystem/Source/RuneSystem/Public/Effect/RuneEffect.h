@@ -3,11 +3,16 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Utils/RuneUtils.h"
-#include "RuneEffectPayload.h"
 #include "RuneEffect.generated.h"
 
 
+struct FRuneEffectPayload;
+
+/**
+ * A Rune Effect can define an "Apply" (the application of the effect itself over a target) 
+ * and a "Revert" (typically the inverse operation of the application).
+ * It also defines how the effect should handle its application/reversion and the faction it affects.
+ */
 UCLASS(Abstract, Blueprintable, EditInlineNew, AutoExpandCategories = "RuneEffect: General Settings", HideCategories = ("ComponentTick", Tags, AssetUserData, ComponentReplication, Activation, Variable, Sockets, Collision, Cooking))
 class RUNESYSTEM_API URuneEffect : public UObject
 {
@@ -122,7 +127,7 @@ public:
 	bool bOverrideFilter;
 
 	/** Filter that overrides the global used filter */
-	UPROPERTY(EditAnywhere, Category = "RuneEffect: General Settings", meta = (EditCondition = "overrideFilter==true", EditConditionHides))
+	UPROPERTY(EditAnywhere, Category = "RuneEffect: General Settings", meta = (EditCondition = "bOverrideFilter", EditConditionHides))
 	class URuneFilter* CustomFilter;
 
 	/** Application Mode should be used */
@@ -143,7 +148,7 @@ protected:
 	 * Used as a "modifiable constant".
 	 * Although it could be done, this should not be modified dynamically.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "RuneEffect: General Settings", meta = (Bitmask, BitmaskEnum = ERuneFilterFaction, DisplayAfter = "overrideFilter"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "RuneEffect: General Settings", meta = (Bitmask, BitmaskEnum = ERuneFilterFaction, DisplayAfter = "bOverrideFilter"))
 	uint8 FilterFaction;
 
 private:

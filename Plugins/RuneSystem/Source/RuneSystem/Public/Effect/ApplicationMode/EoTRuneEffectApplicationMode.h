@@ -5,7 +5,6 @@
 #include "CoreMinimal.h"
 #include "RuneEffectApplicationMode.h"
 #include "StackedRuneEffectApplicationMode.h"
-#include "Effect/RuneEffectHandle.h"
 #include "EoTRuneEffectApplicationMode.generated.h"
 
 
@@ -42,7 +41,7 @@ public:
 	 *
 	 * @param Handle Valid effect activation handle
 	 */
-	virtual void HandleEffectActivation(const FRuneEffectHandle& Handle);
+	virtual void HandleEffectActivation(const struct FRuneEffectHandle& Handle);
 
 	/**
 	 * Handles how an effect is deactivated.
@@ -50,7 +49,7 @@ public:
 	 *
 	 * @param Handle Valid effect activation handle
 	 */
-	virtual void HandleEffectDeactivation(const FRuneEffectHandle& Handle);
+	virtual void HandleEffectDeactivation(const struct FRuneEffectHandle& Handle);
 
 public:
 	/**
@@ -79,13 +78,17 @@ public:
 	UPROPERTY(EditAnywhere, Category = "EoTRuneEffectApplicationMode: General Settings")
 	float TickRate;
 
-	/* Which policy the effect duration follows. Valid with non negative duration. */
-	UPROPERTY(EditAnywhere, Category = "EoTRuneEffectApplicationMode: General Settings")
+	/** Which policy the effect duration follows. Valid with non negative duration. */
+	UPROPERTY(EditAnywhere, Category = "EoTRuneEffectApplicationMode: Stack Settings")
 	EStackDurationPolicy StackDurationPolicy;
 
-	/* Which policy the effect application follows */
-	UPROPERTY(EditAnywhere, Category = "EoTRuneEffectApplicationMode: General Settings")
+	/** Which policy the effect application follows */
+	UPROPERTY(EditAnywhere, Category = "EoTRuneEffectApplicationMode: Stack Settings")
 	EStackApplicationPolicy StackApplicationPolicy;
+
+	/** How many effects can be stacked at a time. If set to 0, infinite stack count */
+	UPROPERTY(EditAnywhere, Category = "EoTRuneEffectApplicationMode: Stack Settings", meta = (EditCondition = "StackDurationPolicy != EStackDurationPolicy::NONE || StackApplicationPolicy != EStackApplicationPolicy::UNSYNCRONIZED"))
+	uint32 MaxStackCount;
 
 };
 
