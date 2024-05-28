@@ -8,19 +8,41 @@
 #include "RuneEffect.h"
 
 
-URuneBaseComponent::URuneBaseComponent() : runeCastStateMachine(nullptr)
+URuneBaseComponent::URuneBaseComponent() : _currentRuneConfigurationIndex(0)
 {
 	// do not tick, this component does only configuration stuff
 	// it does not contain behaviour by itself (at least for now)
-	PrimaryComponentTick.bCanEverTick = false;
+	PrimaryComponentTick.bCanEverTick = true;
 }
 
 void URuneBaseComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// configure all relatioships between components
+	// configure all relationships between components
 	Configure();
+}
+
+void URuneBaseComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+{
+	// TODO: this should not be here. This is complete garbage
+	if (IsValid())
+	{
+		ERuneTaskReturnValue returnValue = runeConfigurations[_currentRuneConfigurationIndex].runeCastStateMachine->Evaluate();
+		if(returnValue != ERuneTaskReturnValue::HOLD)
+		{
+			runeConfigurations[_currentRuneConfigurationIndex].runeCastStateMachine->TickCastStateMachine(DeltaTime, TickType, ThisTickFunction);
+			if (returnValue == ERuneTaskReturnValue::SUCCESS)
+			{
+				_currentRuneConfigurationIndex++;
+				_currentRuneConfigurationIndex = _currentRuneConfigurationIndex % runeConfigurations.Num();
+			}
+			else if (returnValue == ERuneTaskReturnValue::FAILURE)
+			{
+				_currentRuneConfigurationIndex = 0;
+			}
+		}
+	}
 }
 
 
@@ -28,7 +50,7 @@ void URuneBaseComponent::Press()
 {
 	if (IsValid())
 	{
-		runeCastStateMachine->SetPressed();
+		runeConfigurations[_currentRuneConfigurationIndex].runeCastStateMachine->SetPressed();
 	}
 }
 
@@ -36,19 +58,19 @@ void URuneBaseComponent::Release()
 {
 	if (IsValid())
 	{
-		runeCastStateMachine->SetReleased();
+		runeConfigurations[_currentRuneConfigurationIndex].runeCastStateMachine->SetReleased();
 	}
 }
 
 bool URuneBaseComponent::IsValid() const
 {
-	bool isValid = true;
-	for (const FRuneBehaviourWithEffects& rb : runeBehavioursWithEffects)
+	bool isValid = runeConfigurations.Num() > 0;
+	for (const FRuneConfiguration& rc : runeConfigurations)
 	{
-		isValid &= rb.isValid();
+		isValid &= rc.isValid();
 	}
 
-	return runeCastStateMachine != nullptr && isValid;
+	return isValid;
 }
 
 void URuneBaseComponent::SetOwner(IRuneCompatible* owner)
@@ -56,17 +78,20 @@ void URuneBaseComponent::SetOwner(IRuneCompatible* owner)
 	if (owner == nullptr) {
 		return;
 	}
-	for (const FRuneBehaviourWithEffects& rb : runeBehavioursWithEffects)
+	for (const FRuneConfiguration& rc : runeConfigurations)
 	{
-		if (rb.runeBehaviour == nullptr) continue;
-
-		rb.runeBehaviour->runeOwner = owner->_getUObject(); // internal function, created in GENERATED_BODY() macro.
-		for (URuneEffect* effect : rb.runeEffects)
+		for (const FRuneBehaviourWithEffects& rb : rc.runeBehavioursWithEffects)
 		{
-			if (effect != nullptr)
+			if (rb.runeBehaviour == nullptr) continue;
+
+			rb.runeBehaviour->runeOwner = owner->_getUObject(); // internal function, created in GENERATED_BODY() macro.
+			for (URuneEffect* effect : rb.runeEffects)
 			{
-				effect->SetInstigatorFilter(owner->GetRuneFilter());
-				effect->SetInstigator(owner->GetController());
+				if (effect != nullptr)
+				{
+					effect->SetInstigatorFilter(owner->GetRuneFilter());
+					effect->SetInstigator(owner->GetController());
+				}
 			}
 		}
 	}
@@ -80,26 +105,26 @@ void URuneBaseComponent::Configure() const
 		return;
 	}
 
-	TArray<URuneBehaviour*> behaviours;
-	for (const FRuneBehaviourWithEffects& rb : runeBehavioursWithEffects)
+	for (const FRuneConfiguration& rc : runeConfigurations)
 	{
-		behaviours.Add(rb.runeBehaviour);
-		for (URuneEffect* effect : rb.runeEffects)
+		TArray<URuneBehaviour*> behaviours;
+		for (const FRuneBehaviourWithEffects& rb : rc.runeBehavioursWithEffects)
 		{
-			rb.runeBehaviour->onApplyPulse.AddDynamic(effect, &URuneEffect::InternalApply);
-			rb.runeBehaviour->onRevertPulse.AddDynamic(effect, &URuneEffect::InternalRevert);
+			behaviours.Add(rb.runeBehaviour);
+			for (URuneEffect* effect : rb.runeEffects)
+			{
+				rb.runeBehaviour->onApplyPulse.AddDynamic(effect, &URuneEffect::InternalApply);
+				rb.runeBehaviour->onRevertPulse.AddDynamic(effect, &URuneEffect::InternalRevert);
+			}
 		}
+		rc.runeCastStateMachine->SetLinkedBehaviour(behaviours);
+		rc.runeCastStateMachine->ConfigureTask(this);
 	}
-	runeCastStateMachine->SetLinkedBehaviour(behaviours);
 }
 
 bool URuneBaseComponent::Validate() const
 {
 	// log everything that is wrong, then return if it is valid or not.
-	if (runeCastStateMachine == nullptr)
-	{
-		//LOG_WARNING("Error while validating '%s', runeCastStateMachine component not found", *GetOwner()->GetName());
-	}
 	bool valid = IsValid();
 	if (!valid)
 	{
@@ -113,27 +138,40 @@ bool URuneBaseComponent::Validate() const
 void URuneBaseComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
-	TArray<FRuneBehaviourWithEffects> aux;
-	if (PropertyChangedEvent.GetPropertyName() == GET_MEMBER_NAME_CHECKED(URuneBaseComponent, runeCastStateMachine) && runeCastStateMachine != nullptr)
+}
+
+void URuneBaseComponent::PostEditChangeChainProperty(FPropertyChangedChainEvent& PropertyChangedChainEvent)
+{
+	Super::PostEditChangeChainProperty(PropertyChangedChainEvent);
+	if (PropertyChangedChainEvent.GetPropertyName() == GET_MEMBER_NAME_CHECKED(FRuneConfiguration, runeCastStateMachine))
 	{
-		if (runeBehavioursWithEffects.Num() <= 0)
+		int32 index = PropertyChangedChainEvent.GetArrayIndex(GET_MEMBER_NAME_CHECKED(URuneBaseComponent, runeConfigurations).ToString());
+		if (index >= 0 && index < runeConfigurations.Num())
 		{
-			runeBehavioursWithEffects.Init(FRuneBehaviourWithEffects(), runeCastStateMachine->GetBehaviourSlotCount());
-		}
-		else
-		{
-			aux.Init(FRuneBehaviourWithEffects(), runeCastStateMachine->GetBehaviourSlotCount());
-			int index = 0;
-			for (FRuneBehaviourWithEffects& rb : runeBehavioursWithEffects)
+			FRuneConfiguration& rc = runeConfigurations[index];
+			if (rc.runeCastStateMachine != nullptr)
 			{
-				if (index == aux.Num())
+				TArray<FRuneBehaviourWithEffects> aux;
+				if (rc.runeBehavioursWithEffects.Num() <= 0)
 				{
-					break;
+					rc.runeBehavioursWithEffects.Init(FRuneBehaviourWithEffects(), rc.runeCastStateMachine->GetBehaviourSlotCount());
 				}
-				aux[index] = rb;
-				++index;
+				else
+				{
+					aux.Init(FRuneBehaviourWithEffects(), rc.runeCastStateMachine->GetBehaviourSlotCount());
+					int i = 0;
+					for (FRuneBehaviourWithEffects& rb : rc.runeBehavioursWithEffects)
+					{
+						if (i == aux.Num())
+						{
+							break;
+						}
+						aux[i] = rb;
+						++i;
+					}
+					rc.runeBehavioursWithEffects = aux;
+				}
 			}
-			runeBehavioursWithEffects = aux;
 		}
 	}
 }

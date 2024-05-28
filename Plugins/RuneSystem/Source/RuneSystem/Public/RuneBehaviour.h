@@ -40,20 +40,6 @@ public:
 
 public:
 	/**
-	 * Manages the activation of the behaviour.
-	 * (e.g. spawn a ARuneTangibleAgent)
-	 */
-	UFUNCTION(BlueprintCallable)
-	virtual void ActivateBehaviour();
-
-	/**
-	 * Manages the deactivation of the behaviour.
-	 * (e.g. destroy a ARuneTangibleAgent)
-	 */
-	UFUNCTION(BlueprintCallable)
-	virtual void DeactivateBehaviour();
-
-	/**
 	 * Resets the state of the behaviour that gets modified
 	 * via the owner's input.
 	 */
@@ -99,6 +85,20 @@ public:
 	virtual bool IsPreviewShowing() const;
 
 protected:
+	/**
+	 * Manages the activation of the behaviour.
+	 * (e.g. spawn a ARuneTangibleAgent)
+	 */
+	UFUNCTION()
+	virtual void ActivateBehaviour();
+
+	/**
+	 * Manages the deactivation of the behaviour.
+	 * (e.g. destroy a ARuneTangibleAgent)
+	 */
+	UFUNCTION()
+	virtual void DeactivateBehaviour();
+
 	/**
 	 * Spawn and configures (attaches RuneEffects) a RuneTangibleAgent.
 	 *
@@ -206,7 +206,7 @@ protected:
 	 * binded to the OnApplyPulse delegate.
 	 *
 	 * @param actor Actor affected by the pulse
-	 * @return If true, at least one effect have been applied succesfully
+	 * @return If true, at least one effect have been applied successfully
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintPure = "false")
 	bool BroadcastApplyPulse(AActor* actor) const;
@@ -216,7 +216,7 @@ protected:
 	 * binded to the OnRevertPulse delegate.
 	 *
 	 * @param actor Actor affected by the pulse
-	 * @return If true, at least one effect have been applied succesfully
+	 * @return If true, at least one effect have been applied successfully
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintPure = "false")
 	bool BroadcastRevertPulse(AActor* actor) const;
@@ -265,19 +265,19 @@ protected:
 
 private:
 	/** Intermediate ActivateBehaviour() method used for delegate broadcasting coherence */
-	virtual void InternalActivateBehaviour();
+	void InternalActivateBehaviour();
 
 	/** Intermediate DeactivateBehaviour() method used for delegate broadcasting coherence */
-	virtual void InternalDeactivateBehaviour();
+	void InternalDeactivateBehaviour();
 
 	/** Intermediate ResetBehaviour() method used for delegate broadcasting coherence */
-	virtual void InternalResetBehaviour();
+	void InternalResetBehaviour();
 
 	/** Intermediate ShowPreview() method used for delegate broadcasting coherence */
-	virtual bool InternalShowPreview();
+	bool InternalShowPreview();
 
 	/** Intermediate ShowPreview() method used for delegate broadcasting coherence */
-	virtual bool InternalHidePreview();
+	bool InternalHidePreview();
 
 public:
 	/** Called when a behaviour should send an apply pulse to an actor */

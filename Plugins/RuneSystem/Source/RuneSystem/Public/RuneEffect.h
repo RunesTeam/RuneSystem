@@ -14,7 +14,7 @@ class URuneFilter;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FEffectApplicationDelegate, class AActor*, actor);
 
-UENUM()
+UENUM(BlueprintType)
 enum class EApplicationType
 {
 	IMMEDIATE = 0,

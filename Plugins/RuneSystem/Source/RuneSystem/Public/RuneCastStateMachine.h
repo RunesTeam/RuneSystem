@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "RuneTask.h"
 #include "RuneCastStateMachine.generated.h"
 
 
@@ -13,7 +14,7 @@ enum class ETransitionPolicy
 	/** Transition instantly when calling ChangeState */
 	INSTANT = 0,
 
-	/** Transition in the begining of the next frame */
+	/** Transition in the beginning of the next frame */
 	NEXT_TICK,
 
 	/** Transition in the end of the current frame */
@@ -28,6 +29,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FStateTickDelegate, float, deltaTime
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FStateTransitionDelegate);
 
 class URuneBehaviour;
+class URuneBaseComponent;
 
 UCLASS(BlueprintType, Blueprintable)
 class RUNESYSTEM_API UState : public UObject
@@ -83,7 +85,10 @@ protected:
 
 public:
 	// Called every frame
-	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+	virtual void TickCastStateMachine(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction);
+
+	UFUNCTION(BlueprintCallable)
+	ERuneTaskReturnValue Evaluate();
 
 public:
 	/**
@@ -153,6 +158,14 @@ public:
 	void SetLinkedBehaviour(TArray<URuneBehaviour*> runeBehaviours);
 
 	/**
+	 * Configures listeners for UTask that allow later evaluation
+	 * 
+	 * @param runeBaseComponent Constant pointer to base component
+	 */
+	UFUNCTION(BlueprintCallable)
+	void ConfigureTask(const URuneBaseComponent* runeBaseComponent) const;
+
+	/**
 	 * Creates a new State and adds it the the states list.
 	 * Sets a given name as an identifier. Unique names are recommended.
 	 * 
@@ -217,7 +230,7 @@ public:
 	 * Deactivates a behaviour in a given slot index.
 	 *
 	 * @param index Slot index
-	 * @return If true, behaviour has succesfully been deactivated
+	 * @return If true, behaviour has successfully been deactivated
 	 */
 	UFUNCTION(BlueprintCallable)
 	bool DeactivateBehaviourSlot(int index = 0);
@@ -226,7 +239,7 @@ public:
 	 * Deactivates a behaviour in a given slot index.
 	 *
 	 * @param index Slot index
-	 * @return If true, behaviour has succesfully been reset
+	 * @return If true, behaviour has successfully been reset
 	 */
 	UFUNCTION(BlueprintCallable)
 	bool ResetBehaviourSlot(int index = 0);
@@ -235,7 +248,7 @@ public:
 	 * Shows a behaviour preview in a given slot index.
 	 *
 	 * @param index Slot index
-	 * @return If true, behaviour has succesfully been shown
+	 * @return If true, behaviour has successfully been shown
 	 */
 	UFUNCTION(BlueprintCallable)
 	bool ShowBehaviourSlotPreview(int index = 0);
@@ -244,7 +257,7 @@ public:
 	 * Hides a behaviour preview in a given slot index.
 	 *
 	 * @param index Slot index
-	 * @return If true, behaviour has succesfully been hidden
+	 * @return If true, behaviour has successfully been hidden
 	 */
 	UFUNCTION(BlueprintCallable)
 	bool HideBehaviourSlotPreview(int index = 0);
@@ -320,6 +333,10 @@ private:
 
 public:
 	/** What policy should be used when changing states */
+	UPROPERTY(EditAnywhere, Instanced, Category = "RuneCastStateMachine: General Settings")
+	URuneTask* runeTask;
+
+	/** What policy should be used when changing states */
 	UPROPERTY(EditAnywhere, Category = "RuneCastStateMachine: General Settings")
 	ETransitionPolicy transitionPolicy;
 
@@ -377,11 +394,11 @@ private:
 	UPROPERTY()
 	const UState* _entryState;
 
-	/** Cached states. This will prevent GC from free-ing the memory */
+	/** Cached states. This will prevent GC from freeing the memory */
 	UPROPERTY()
 	TArray<UState*> _states;
 
-	/** Pending states that has to be transitioned to */
+	/** Pending states that have to be transitioned to */
 	TQueue<const UState*> _pendingStates;
 
 	/** Linked RuneBehaviour this StateMachine is managing */

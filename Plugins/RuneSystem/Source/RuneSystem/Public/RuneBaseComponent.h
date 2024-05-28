@@ -17,11 +17,11 @@ struct FRuneBehaviourWithEffects
 {
 	GENERATED_BODY()
 	/** Casted rune behaviour which will apply effects */
-	UPROPERTY(EditAnywhere, Category = "RuneBase: General Settings", Instanced, meta = (FullyExpand = true))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "RuneBase: General Settings", Instanced, meta = (FullyExpand = true))
 	URuneBehaviour* runeBehaviour;
 
 	/** Effects applied by the behaviour */
-	UPROPERTY(EditAnywhere, Category = "RuneBase: General Settings", Instanced, meta = (FullyExpand = true))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "RuneBase: General Settings", Instanced, meta = (FullyExpand = true))
 	TArray<URuneEffect*> runeEffects;
 
 	bool isValid() const
@@ -59,7 +59,33 @@ struct FRuneBehaviourWithEffects
 	}
 };
 
-UCLASS(ClassGroup = "RuneSystem", EditInlineNew, AutoExpandCategories = ("RuneBase: General Settings"), Blueprintable, meta = (BlueprintSpawnableComponent), HideCategories = ("ComponentTick", Tags, AssetUserData, ComponentReplication, Activation, Variable, Sockets, Collision, Cooking, "Components|Activation"))
+USTRUCT(Blueprintable, BlueprintType)
+struct FRuneConfiguration
+{
+public:
+	GENERATED_BODY()
+
+	/** Rune cast state machine used to cast the rune behaviour(s) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "RuneBase: General Settings", Instanced, meta = (FullyExpand = true), BlueprintReadOnly)
+	class URuneCastStateMachine* runeCastStateMachine;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "RuneBase: General Settings", EditFixedSize, meta = (ShowOnlyInnerProperties))
+	TArray<FRuneBehaviourWithEffects> runeBehavioursWithEffects;
+
+	bool isValid() const
+	{
+		bool isValid = true;
+		for (const FRuneBehaviourWithEffects& rb : runeBehavioursWithEffects)
+		{
+			isValid &= rb.isValid();
+		}
+
+		return runeCastStateMachine != nullptr && isValid;
+	}
+};
+
+
+UCLASS(ClassGroup = "RuneSystem", EditInlineNew, AutoExpandCategories = ("RuneBase: General Settings"), Blueprintable, meta = (BlueprintSpawnableComponent)/*, HideCategories = ("ComponentTick", Tags, AssetUserData, ComponentReplication, Activation, Variable, Sockets, Collision, Cooking, Replication, Navigation, "Components|Activation")*/)
 class RUNESYSTEM_API URuneBaseComponent : public UActorComponent
 {
 	GENERATED_BODY()
@@ -73,6 +99,8 @@ protected:
 	virtual void BeginPlay() override;
 
 public:
+	// Called every frame
+	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	/**
 	 * Sets cast state machine internal variable to pressed,
 	 * potentially altering state
@@ -117,16 +145,27 @@ private:
 	bool Validate() const;
 
 public:
-	/** Rune cast state machine used to cast the rune behaviour */
-	UPROPERTY(EditAnywhere, Category = "RuneBase: General Settings", Instanced, meta = (FullyExpand = true), BlueprintReadOnly)
-	class URuneCastStateMachine* runeCastStateMachine;
+	/**
+	 * Rune configurations, each one including a rune cast and one or more rune behaviours with rune effects.
+	 * When having more than one rune configuration rune tasks are needed to control execution flow.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "RuneBase: General Settings", meta = (ShowOnlyInnerProperties))
+	TArray<FRuneConfiguration> runeConfigurations;
 
-	UPROPERTY(EditAnywhere, Category = "RuneBase: General Settings", EditFixedSize, meta = (ShowOnlyInnerProperties))
-	TArray<FRuneBehaviourWithEffects> runeBehavioursWithEffects;
+	///** Rune cast state machine used to cast the rune behaviour */
+	//UPROPERTY(EditAnywhere, Category = "RuneBase: General Settings", Instanced, meta = (FullyExpand = true), BlueprintReadOnly)
+	//class URuneCastStateMachine* runeCastStateMachine;
+
+	//UPROPERTY(EditAnywhere, Category = "RuneBase: General Settings", EditFixedSize, meta = (ShowOnlyInnerProperties))
+	//TArray<FRuneBehaviourWithEffects> runeBehavioursWithEffects;
 
 protected:
 
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+	virtual void PostEditChangeChainProperty(struct FPropertyChangedChainEvent& PropertyChangedChainEvent) override;
 #endif
+
+private:
+	int _currentRuneConfigurationIndex;
 };
