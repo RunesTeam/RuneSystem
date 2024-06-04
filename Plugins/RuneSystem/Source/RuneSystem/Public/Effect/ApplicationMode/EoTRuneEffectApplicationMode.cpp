@@ -158,7 +158,7 @@ void UEoTRuneEffectApplicationMode::HandleEffectActivation(const FRuneEffectHand
 		// If we have passed the max stack count, force this application 
 		// to be disposed after reseting timers if needed
 		const uint32 TotalStackCount = ActiveApplicationHandles.Num() + 1;
-		if (TotalStackCount > MaxStackCount)
+		if (MaxStackCount > 0 && TotalStackCount > MaxStackCount)
 		{
 			SubmitDeactivation(Handle);
 		}
