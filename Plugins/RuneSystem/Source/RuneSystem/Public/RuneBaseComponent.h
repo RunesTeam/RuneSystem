@@ -9,8 +9,8 @@
 #include "RuneBaseComponent.generated.h"
 
 class IRuneCompatible;
-//class URuneBehaviour;
-//class URuneEffect;
+class URuneInternalScheduler;
+class URuneTask;
 
 USTRUCT(Blueprintable, BlueprintType)
 struct FRuneBehaviourWithEffects
@@ -145,6 +145,7 @@ private:
 	bool Validate() const;
 
 public:
+
 	/**
 	 * Rune configurations, each one including a rune cast and one or more rune behaviours with rune effects.
 	 * When having more than one rune configuration rune tasks are needed to control execution flow.
@@ -152,12 +153,21 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "RuneBase: General Settings", meta = (ShowOnlyInnerProperties))
 	TArray<FRuneConfiguration> runeConfigurations;
 
-	///** Rune cast state machine used to cast the rune behaviour */
-	//UPROPERTY(EditAnywhere, Category = "RuneBase: General Settings", Instanced, meta = (FullyExpand = true), BlueprintReadOnly)
-	//class URuneCastStateMachine* runeCastStateMachine;
+	/**
+	 * Internal scheduler, responsible for determining which rune configuration should be ticked each frame.
+	 * If the rune only has one configuration this component is not needed and can be null.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "RuneBase: Advanced Settings", Instanced, meta = (FullyExpand = true), BlueprintReadOnly)
+	URuneInternalScheduler* runeInternalScheduler;
 
-	//UPROPERTY(EditAnywhere, Category = "RuneBase: General Settings", EditFixedSize, meta = (ShowOnlyInnerProperties))
-	//TArray<FRuneBehaviourWithEffects> runeBehavioursWithEffects;
+	/**
+	 * Rune Tasks are objects that can add an evaluable state to their specific linked rune configuration.
+	 * This state is used by the internal scheduler for determining which rune configuration should be ticked
+	 * each frame.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "RuneBase: Advanced Settings", Instanced, EditFixedSize, meta = (ShowOnlyInnerProperties, EditCondition = "runeInternalScheduler!=nullptr", EditConditionHides))
+	TArray<URuneTask*> runeTasks;
+
 
 protected:
 
@@ -165,7 +175,4 @@ protected:
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 	virtual void PostEditChangeChainProperty(struct FPropertyChangedChainEvent& PropertyChangedChainEvent) override;
 #endif
-
-private:
-	int _currentRuneConfigurationIndex;
 };

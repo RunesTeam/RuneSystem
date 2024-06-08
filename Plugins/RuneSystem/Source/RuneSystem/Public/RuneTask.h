@@ -3,22 +3,27 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "RuneBaseComponent.h"
 #include "RuneTask.generated.h"
 
-// TODO: This enum is NOT a good solution
-UENUM()
-enum class ERuneTaskReturnValue
+UENUM(BlueprintType)
+enum class ERuneTaskValue : uint8
 {
-	SUCCESS,
+	INVALID = 0			 UMETA(Hidden),
+	SUCCESS = 1,
 	FAILURE,
 	RUNNING,
 	HOLD,
+	FIRST_ENUM = SUCCESS	UMETA(Hidden),
+	LAST_ENUM = HOLD		UMETA(Hidden)
 };
 
-class URuneBaseComponent;
+using ExtendedTaskValue = ExtendedEnum<ERuneTaskValue>;
 
-UCLASS(Abstract, Blueprintable, EditInlineNew, HideCategories = ("ComponentTick", Tags, AssetUserData, ComponentReplication, Activation, Variable, Sockets, Collision, Cooking, "Components|Activation"))
-class RUNESYSTEM_API URuneTask : public UActorComponent
+class URuneCastStateMachine;
+
+UCLASS(Abstract, BlueprintType, Blueprintable, EditInlineNew)
+class RUNESYSTEM_API URuneTask : public UObject
 {
 	GENERATED_BODY()
 
@@ -26,25 +31,40 @@ public:
 	// Sets default values for this component's properties
 	URuneTask();
 
+	/**
+	 * Sets up all listeners necessary for the task to have an updated value
+	 * based on its linked runeConfiguration
+	 *
+	 * @param runeConfiguration Set of CastStateMachine, Behaviours and Effects linked to the task
+	 */
 	UFUNCTION(BlueprintCallable)
-	virtual ERuneTaskReturnValue Evaluate() const;
+	virtual void Configure(const FRuneConfiguration& runeConfiguration);
 
-protected:
-	// Called when the game starts
-	virtual void BeginPlay() override;
-
-public:	
-	// Called every frame
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
-
-	UFUNCTION(BlueprintCallable)
-	virtual void Configure(const URuneBaseComponent* runeBaseComponent);
-
+	/**
+	 * Blueprint-implementable version of Configure()
+	 *
+	 * @param runeConfiguration
+	 */
 	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "Configure"))
-	void ReceiveConfigure(const URuneBaseComponent* runeBaseComponent);
+	void ReceiveConfigure(const FRuneConfiguration& runeConfiguration);
 
-protected:
-	UPROPERTY(BlueprintReadWrite)
-	TEnumAsByte <ERuneTaskReturnValue> currentReturnValue;
-		
+	/**
+	 * Functionality that gets call every frame after the current value of the task has been evaluated	 * 
+	 */
+	virtual void PostEvaluationUpdate();
+
+	/**
+	 * Blueprint-implementable version of PostEvaluationUpdate()	 *
+	 */
+	UFUNCTION(BlueprintImplementableEvent, meta = (DisplayName = "PostEvaluationUpdate"))
+	void ReceivePostEvaluationUpdate();
+
+	UFUNCTION(BlueprintCallable)
+	ERuneTaskValue GetTaskValue() const { return taskValue.Get<ERuneTaskValue>(); };
+
+	UFUNCTION(BlueprintCallable)
+	virtual void SetTaskValue(ERuneTaskValue newValue) { taskValue = newValue; };
+
+public:
+	ExtendedTaskValue taskValue;
 };

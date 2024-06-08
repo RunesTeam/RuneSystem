@@ -56,6 +56,10 @@ void URuneCastStateMachine::BeginPlay()
 
 void URuneCastStateMachine::TickCastStateMachine(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
+	if (!PrimaryComponentTick.bCanEverTick)
+	{
+		return;
+	}
 	// TODO: state machine related policies:
 	// - Allow tick when theres more than one pending state
 	// - Flush all pending states in a single frame or one state per frame
@@ -89,18 +93,6 @@ void URuneCastStateMachine::TickCastStateMachine(float DeltaTime, ELevelTick Tic
 
 		// perform state change
 		PerformTransition(pendingState);
-	}
-}
-
-ERuneTaskReturnValue URuneCastStateMachine::Evaluate()
-{
-	if (runeTask != nullptr)
-	{
-		return runeTask->Evaluate();
-	}
-	else
-	{
-		return ERuneTaskReturnValue::RUNNING;
 	}
 }
 
@@ -201,14 +193,6 @@ void URuneCastStateMachine::SetLinkedBehaviour(TArray<URuneBehaviour*> newBehavi
 			behaviour->DestroyComponent();
 	}
 	runeBehaviours = newBehaviours;
-}
-
-void URuneCastStateMachine::ConfigureTask(const URuneBaseComponent* runeBaseComponent) const
-{
-	if (runeTask != nullptr)
-	{
-		runeTask->Configure(runeBaseComponent);
-	}
 }
 
 UState* URuneCastStateMachine::CreateState(FName name)

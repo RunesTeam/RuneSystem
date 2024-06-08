@@ -323,3 +323,124 @@ inline T* URuneUtils::SpawnPreviewAgent(const URuneBehaviour& behaviour, const F
 
 	return CastChecked<T>(previewAgent, ECastCheckedType::NullAllowed);
 }
+
+// ----------------------------
+// Extendable Enums
+// ----------------------------
+
+template <typename DataType>
+concept ExtendableEnumConcept = std::is_enum_v<DataType> && requires()
+{
+	DataType::FIRST_ENUM;
+	DataType::LAST_ENUM;
+};
+
+template <ExtendableEnumConcept BaseEnum>
+struct EnumExtension
+{
+	using ExtensionType = void; //Default to no extension
+};
+
+template <ExtendableEnumConcept BaseEnum>
+using EnumExtensionT = typename EnumExtension<BaseEnum>::ExtensionType;
+
+
+template <typename E>
+constexpr typename std::underlying_type<E>::type to_underlying(E e) noexcept {
+	return static_cast<typename std::underlying_type<E>::type>(e);
+};
+
+template <ExtendableEnumConcept Base, ExtendableEnumConcept Extension>
+consteval bool Can_ExtendEnum()
+{
+	//Must have same underlying type, and ranges cannot overlap
+	return std::is_same_v<std::underlying_type_t<Base>,
+		std::underlying_type_t<Extension>> &&
+		(to_underlying(Base::LAST_ENUM) < to_underlying(Extension::FIRST_ENUM));
+}
+
+template <ExtendableEnumConcept Base, ExtendableEnumConcept Extension>
+consteval bool Get_IsEnumExtension()
+{
+	if (!Can_ExtendEnum<Base, Extension>())
+		return false; //Not even possible (e.g. range overlap)
+
+	using NextExtension = EnumExtensionT<Base>;
+	if (std::is_same_v<NextExtension, Extension>)
+		return true; //Found it!
+
+	if constexpr (std::is_same_v<NextExtension, void>)
+		return false; //Reached the end of the chain: not an extension
+	else //Go to the next link in the extension chain
+		return Get_IsEnumExtension<NextExtension, Extension>();
+}
+
+template <ExtendableEnumConcept BaseEnum>
+class ExtendedEnumBase
+{
+protected:
+	using DataType = std::underlying_type_t<BaseEnum>;
+	DataType mValue = std::numeric_limits<DataType>::max();
+public:
+	constexpr ExtendedEnumBase() = default;
+	constexpr ExtendedEnumBase(DataType aValue) : mValue(aValue) {};
+};
+
+template <ExtendableEnumConcept BaseEnum>
+class ExtendedEnum : public ExtendedEnumBase<BaseEnum>
+{
+public:
+	using DataType = typename ExtendedEnumBase<BaseEnum>::DataType;
+
+	constexpr DataType Get() const { return this->mValue; }
+
+	template <ExtendableEnumConcept EnumType>
+	constexpr EnumType Get() const
+		requires (Is_Storable<EnumType>())
+	{
+		return EnumType(this->mValue);
+	}
+
+	constexpr operator DataType() const { return Get(); }
+public:
+	//...
+	//IS_STORABLE:
+	template <ExtendableEnumConcept EnumType>
+	static constexpr bool Is_Storable()
+		requires(std::is_same_v<EnumType, BaseEnum>)
+	{
+		return true;
+	}
+
+	template <ExtendableEnumConcept EnumType>
+	static constexpr bool Is_Storable()
+		requires(!std::is_same_v<EnumType, BaseEnum>)
+	{
+		return (Get_IsEnumExtension<BaseEnum, EnumType>());
+	}
+
+	//CONSTRUCTORS
+	constexpr ExtendedEnum() = default;
+
+	template <ExtendableEnumConcept EnumType>
+	constexpr ExtendedEnum(EnumType aEnum)
+		requires (Is_Storable<EnumType>()) : ExtendedEnumBase<BaseEnum>{ to_underlying(aEnum) } {}
+
+	//ASSIGNMENT
+	template <ExtendableEnumConcept EnumType>
+	constexpr ExtendedEnum& operator=(EnumType aEnum)
+		requires (Is_Storable<EnumType>())
+	{
+		this->mValue = to_underlying(aEnum); return *this;
+	}
+
+	template <ExtendableEnumConcept EnumType>
+	constexpr bool operator==(EnumType aEnum) const
+		requires (Is_Storable<EnumType>())
+	{
+		return Get() == to_underlying(aEnum);
+	}
+};
+
+#define EXTEND_ENUM(BaseEnum, Enum)	template <> \
+									struct EnumExtension<BaseEnum> { using ExtensionType = Enum; };

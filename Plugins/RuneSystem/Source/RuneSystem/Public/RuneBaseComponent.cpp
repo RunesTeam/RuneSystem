@@ -6,9 +6,11 @@
 #include "RuneCastStateMachine.h"
 #include "RuneCompatible.h"
 #include "RuneEffect.h"
+#include "RuneInternalScheduler.h"
+#include "RuneTask.h"
 
 
-URuneBaseComponent::URuneBaseComponent() : _currentRuneConfigurationIndex(0)
+URuneBaseComponent::URuneBaseComponent()
 {
 	// do not tick, this component does only configuration stuff
 	// it does not contain behaviour by itself (at least for now)
@@ -25,24 +27,34 @@ void URuneBaseComponent::BeginPlay()
 
 void URuneBaseComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
-	// TODO: this should not be here. This is complete garbage
 	if (IsValid())
 	{
-		ERuneTaskReturnValue returnValue = runeConfigurations[_currentRuneConfigurationIndex].runeCastStateMachine->Evaluate();
-		if(returnValue != ERuneTaskReturnValue::HOLD)
+		if (runeInternalScheduler != nullptr)
 		{
-			runeConfigurations[_currentRuneConfigurationIndex].runeCastStateMachine->TickCastStateMachine(DeltaTime, TickType, ThisTickFunction);
-			if (returnValue == ERuneTaskReturnValue::SUCCESS)
+			int scheduledRuneConfigIndex = runeInternalScheduler->GetScheduledRuneConfigIndex();
+			URuneTask* activeRuneTask = runeTasks[scheduledRuneConfigIndex];
+				//runeConfigurations[scheduledRuneConfigIndex].runeCastStateMachine->runeTask;
+			if (runeInternalScheduler->ScheduledRuneConfig(activeRuneTask)) 
 			{
-				_currentRuneConfigurationIndex++;
-				_currentRuneConfigurationIndex = _currentRuneConfigurationIndex % runeConfigurations.Num();
+				// Reevaluate scheduled config index
+				scheduledRuneConfigIndex = runeInternalScheduler->GetScheduledRuneConfigIndex();
+				if (scheduledRuneConfigIndex >= 0 && scheduledRuneConfigIndex < runeConfigurations.Num()) 
+				{
+					runeConfigurations[scheduledRuneConfigIndex].runeCastStateMachine->TickCastStateMachine(DeltaTime, TickType, ThisTickFunction);
+				}
 			}
-			else if (returnValue == ERuneTaskReturnValue::FAILURE)
+				
+			if (activeRuneTask != nullptr)
 			{
-				_currentRuneConfigurationIndex = 0;
+				activeRuneTask->PostEvaluationUpdate();
 			}
 		}
-	}
+		else
+		{
+			// A valid rune always has, at least, one configuration, making this call safe
+			runeConfigurations[0].runeCastStateMachine->TickCastStateMachine(DeltaTime, TickType, ThisTickFunction);
+		}
+	}	
 }
 
 
@@ -50,7 +62,8 @@ void URuneBaseComponent::Press()
 {
 	if (IsValid())
 	{
-		runeConfigurations[_currentRuneConfigurationIndex].runeCastStateMachine->SetPressed();
+		int scheduledRuneConfigIndex = runeInternalScheduler ? runeInternalScheduler->GetScheduledRuneConfigIndex() : 0;
+		runeConfigurations[scheduledRuneConfigIndex].runeCastStateMachine->SetPressed();
 	}
 }
 
@@ -58,18 +71,22 @@ void URuneBaseComponent::Release()
 {
 	if (IsValid())
 	{
-		runeConfigurations[_currentRuneConfigurationIndex].runeCastStateMachine->SetReleased();
+		int scheduledRuneConfigIndex = runeInternalScheduler ? runeInternalScheduler->GetScheduledRuneConfigIndex() : 0;
+		runeConfigurations[scheduledRuneConfigIndex].runeCastStateMachine->SetReleased();
 	}
 }
 
 bool URuneBaseComponent::IsValid() const
 {
 	bool isValid = runeConfigurations.Num() > 0;
-	for (const FRuneConfiguration& rc : runeConfigurations)
+	for (int i = 0; i < runeConfigurations.Num() && isValid; i++)
 	{
-		isValid &= rc.isValid();
+		isValid &= runeConfigurations[i].isValid();
 	}
-
+	if (isValid && runeInternalScheduler != nullptr)
+	{
+		isValid &= runeConfigurations.Num() == runeTasks.Num();
+	}
 	return isValid;
 }
 
@@ -105,6 +122,7 @@ void URuneBaseComponent::Configure() const
 		return;
 	}
 
+	int index = 0;
 	for (const FRuneConfiguration& rc : runeConfigurations)
 	{
 		TArray<URuneBehaviour*> behaviours;
@@ -118,7 +136,15 @@ void URuneBaseComponent::Configure() const
 			}
 		}
 		rc.runeCastStateMachine->SetLinkedBehaviour(behaviours);
-		rc.runeCastStateMachine->ConfigureTask(this);
+		if (runeTasks[index] != nullptr)
+		{
+			runeTasks[index]->Configure(rc);
+		}
+		index++;
+	}
+	if (runeInternalScheduler != nullptr)
+	{
+		runeInternalScheduler->Configure(runeConfigurations.Num());
 	}
 }
 
@@ -138,6 +164,25 @@ bool URuneBaseComponent::Validate() const
 void URuneBaseComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeProperty(PropertyChangedEvent);
+	if (PropertyChangedEvent.GetPropertyName() == GET_MEMBER_NAME_CHECKED(URuneBaseComponent, runeConfigurations))
+	{
+		if (runeConfigurations.Num() <= 0)
+		{
+			runeTasks.Init(nullptr, runeConfigurations.Num());
+		}
+		else
+		{
+			TArray<URuneTask*> aux; 
+			aux.Init(nullptr, runeConfigurations.Num());
+			int index = 0;
+			for (int i = 0; i < aux.Num() && i < runeTasks.Num(); i++)
+			{
+				aux[i] = runeTasks[i];
+
+			}
+			runeTasks = aux;
+		}
+	}
 }
 
 void URuneBaseComponent::PostEditChangeChainProperty(FPropertyChangedChainEvent& PropertyChangedChainEvent)

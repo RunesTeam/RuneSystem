@@ -4,9 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "RuneTask.h"
 #include "RuneCastStateMachine.generated.h"
-
 
 UENUM()
 enum class ETransitionPolicy
@@ -29,7 +27,6 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FStateTickDelegate, float, deltaTime
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FStateTransitionDelegate);
 
 class URuneBehaviour;
-class URuneBaseComponent;
 
 UCLASS(BlueprintType, Blueprintable)
 class RUNESYSTEM_API UState : public UObject
@@ -84,16 +81,13 @@ protected:
 	virtual void BeginPlay() override;
 
 public:
-	// Called every frame
-	virtual void TickCastStateMachine(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction);
 
-	UFUNCTION(BlueprintCallable)
-	ERuneTaskReturnValue Evaluate();
+	virtual void TickCastStateMachine(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction);
 
 public:
 	/**
 	 * Method invoked in BeginPlay(), you can either override this method or use the BeginPlay() method.
-	 * Use it to configure the states functionallity this StateMachine will manage.
+	 * Use it to configure the states functionality this StateMachine will manage.
 	 */
 	UFUNCTION(BlueprintCallable)
 	virtual void Init();
@@ -158,14 +152,6 @@ public:
 	void SetLinkedBehaviour(TArray<URuneBehaviour*> runeBehaviours);
 
 	/**
-	 * Configures listeners for UTask that allow later evaluation
-	 * 
-	 * @param runeBaseComponent Constant pointer to base component
-	 */
-	UFUNCTION(BlueprintCallable)
-	void ConfigureTask(const URuneBaseComponent* runeBaseComponent) const;
-
-	/**
 	 * Creates a new State and adds it the the states list.
 	 * Sets a given name as an identifier. Unique names are recommended.
 	 * 
@@ -221,7 +207,7 @@ public:
 	 * Activates a behaviour in a given slot index.
 	 * 
 	 * @param index Slot index
-	 * @return If true, behaviour has succesfully been activated
+	 * @return If true, behaviour has successfully been activated
 	 */
 	UFUNCTION(BlueprintCallable)
 	bool ActivateBehaviourSlot(int index = 0);
@@ -332,10 +318,6 @@ private:
 	void PerformTransition(const UState* state);
 
 public:
-	/** What policy should be used when changing states */
-	UPROPERTY(EditAnywhere, Instanced, Category = "RuneCastStateMachine: General Settings")
-	URuneTask* runeTask;
-
 	/** What policy should be used when changing states */
 	UPROPERTY(EditAnywhere, Category = "RuneCastStateMachine: General Settings")
 	ETransitionPolicy transitionPolicy;
